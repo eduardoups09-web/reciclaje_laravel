@@ -21,7 +21,7 @@
             <select name="anio" class="form-select">
                 <option value="">Todos</option>
                 @foreach ($anios as $a)
-                    <option value="{{ $a }}" @selected(($filtros['anio ?? '') == $a)>{{ $a }}</option>
+                    <option value="{{ $a }}" @selected(($filtros['anio'] ?? '') == $a)>{{ $a }}</option>
                 @endforeach
             </select>
         </div>
