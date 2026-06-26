@@ -12,25 +12,21 @@
 {{-- Filtros --}}
 <form method="get" action="{{ route('calidad.index') }}" class="card card-body shadow-sm mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-md-3">
-            <label class="form-label small">Fecha</label>
-            <input type="date" name="fecha" value="{{ $filtros['fecha'] ?? '' }}" class="form-control">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small">Turno</label>
-            <select name="turno" class="form-select">
+        <div class="col-md-2">
+            <label class="form-label small">Año</label>
+            <select name="anio" class="form-select">
                 <option value="">Todos</option>
-                @foreach (AnalisisCalidad::TURNOS as $t)
-                    <option value="{{ $t }}" @selected(($filtros['turno'] ?? '') === $t)>{{ $t }}</option>
+                @foreach ($anios as $a)
+                    <option value="{{ $a }}" @selected(($filtros['anio'] ?? '') == $a)>{{ $a }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label small">Reactor</label>
-            <select name="reactor" class="form-select">
+        <div class="col-md-2">
+            <label class="form-label small">Mes</label>
+            <select name="mes" class="form-select">
                 <option value="">Todos</option>
-                @foreach (AnalisisCalidad::REACTORES as $r)
-                    <option value="{{ $r }}" @selected(($filtros['reactor'] ?? '') === $r)>{{ $r }}</option>
+                @foreach ([1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',7=>'Julio',8=>'Agosto',9=>'Septiembre',10=>'Octubre',11=>'Noviembre',12=>'Diciembre'] as $num => $nombre)
+                    <option value="{{ $num }}" @selected(($filtros['mes'] ?? '') == $num)>{{ $nombre }}</option>
                 @endforeach
             </select>
         </div>
@@ -49,6 +45,8 @@
             <thead class="table-light">
                 <tr>
                     <th>Fecha</th><th>Hora</th><th>Turno</th><th>Reactor</th><th>Filtro</th>
+                    <th class="text-end">PI</th>
+                    <th class="text-end">PF</th>
                     <th class="text-end">Temp. (°C)</th>
                     <th class="text-end">pH</th>
                     <th class="text-end">Azufre (%)</th>
@@ -63,8 +61,12 @@
                     <td>{{ $r->fecha }}</td>
                     <td>{{ $r->hora_corta }}</td>
                     <td>{{ $r->turnocalidad }}</td>
-                    <td><span class="badge bg-secondary">{{ $r->reactor }}</span></td>
+                    <td>
+                        {{ $r->reactores_nombres ?: '—' }}
+                    </td>
                     <td>{{ $r->filtro }}</td>
+                    <td class="text-end">{{ !is_null($r->pi) ? number_format($r->pi, 2) : '—' }}</td>
+                    <td class="text-end">{{ !is_null($r->pf) ? number_format($r->pf, 2) : '—' }}</td>
                     <td class="text-end">{{ !is_null($r->temperatura) ? number_format($r->temperatura, 2) : '—' }}</td>
                     <td class="text-end">{{ !is_null($r->ph) ? number_format($r->ph, 2) : '—' }}</td>
                     <td class="text-end">{{ !is_null($r->azufre) ? number_format($r->azufre, 2) : '—' }}</td>
@@ -81,7 +83,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="11" class="text-center text-muted py-4">Sin registros.</td></tr>
+                <tr><td colspan="13" class="text-center text-muted py-4">Sin registros.</td></tr>
             @endforelse
             </tbody>
         </table>

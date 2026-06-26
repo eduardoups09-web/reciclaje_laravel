@@ -13,7 +13,8 @@ class AnalisisCalidad extends Model
 
     protected $fillable = [
         'fecha', 'turnocalidad', 'grupocalidad', 'reactor', 'filtro', 'hora',
-        'temperatura', 'ph', 'azufre', 'humedad',
+        'reactor1', 'reactor2', 'reactor3', 'reactor4',
+        'temperatura', 'ph', 'azufre', 'humedad', 'pi', 'pf',
         'is_deleted', 'usernamecalidad',
     ];
 
@@ -30,23 +31,32 @@ class AnalisisCalidad extends Model
     public const REACTORES = ['Reactor#1', 'Reactor#2', 'Reactor#3', 'Reactor#4'];
     public const FILTROS   = ['Filtro#1', 'Filtro#2'];
 
+    /** Devuelve los nombres de reactores activos separados por coma. */
+    public function getReactoresNombresAttribute(): string
+    {
+        $nombres = [];
+        foreach (self::REACTORES as $i => $nombre) {
+            if (!empty($this->{'reactor' . ($i + 1)})) {
+                $nombres[] = $nombre;
+            }
+        }
+        return implode(', ', $nombres);
+    }
+
     /** Scope: solo registros no eliminados. */
     public function scopeActivos($query)
     {
         return $query->where('is_deleted', 0);
     }
 
-    /** Scope: aplica filtros del listado (fecha, turno, reactor). */
+    /** Scope: aplica filtros del listado (año, mes). */
     public function scopeFiltrar($query, array $filtros)
     {
-        if (!empty($filtros['fecha'])) {
-            $query->where('fecha', $filtros['fecha']);
+        if (!empty($filtros['anio'])) {
+            $query->whereYear('fecha', $filtros['anio']);
         }
-        if (!empty($filtros['turno'])) {
-            $query->where('turnocalidad', $filtros['turno']);
-        }
-        if (!empty($filtros['reactor'])) {
-            $query->where('reactor', $filtros['reactor']);
+        if (!empty($filtros['mes'])) {
+            $query->whereMonth('fecha', $filtros['mes']);
         }
         return $query;
     }

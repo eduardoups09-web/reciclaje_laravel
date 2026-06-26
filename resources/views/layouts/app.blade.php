@@ -35,13 +35,8 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('produccion.*') ? 'active' : '' }}" href="{{ route('produccion.index') }}">
-                        <i class="bi bi-box-seam"></i> Producción
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('calidad.*') ? 'active' : '' }}" href="{{ route('calidad.index') }}">
-                        <i class="bi bi-droplet-half"></i> Calidad
+                    <a class="nav-link {{ request()->routeIs('operaciones.*', 'produccion.*', 'calidad.*', 'mpimport.*', 'mpnacional.*', 'insumos.*', 'movimiento-detalle.*') ? 'active' : '' }}" href="{{ route('operaciones.index') }}">
+                        <i class="bi bi-gear"></i> Operaciones
                     </a>
                 </li>
                 <li class="nav-item dropdown">
@@ -100,5 +95,6 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@stack('scripts')
 </body>
 </html>

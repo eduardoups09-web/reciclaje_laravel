@@ -9,7 +9,7 @@
         <i class="bi bi-{{ $esEditar ? 'pencil-square' : 'plus-circle' }} text-success"></i>
         {{ $esEditar ? 'Editar registro #' . $salida->id : 'Nuevo registro de producción' }}
     </h3>
-    <a href="{{ route('produccion.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+    <a href="{{ route('operaciones.index', ['tab' => 'produccion']) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
 </div>
 
 <form method="post" action="{{ $esEditar ? route('produccion.update', $salida) : route('produccion.store') }}">
@@ -60,6 +60,6 @@
     </div>
 
     <button class="btn btn-success btn-lg"><i class="bi bi-save"></i> Guardar</button>
-    <a href="{{ route('produccion.index') }}" class="btn btn-light btn-lg">Cancelar</a>
+    <a href="{{ route('operaciones.index', ['tab' => 'produccion']) }}" class="btn btn-light btn-lg">Cancelar</a>
 </form>
 @endsection

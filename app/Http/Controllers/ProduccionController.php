@@ -12,7 +12,10 @@ class ProduccionController extends Controller
     /** Listado con filtros y paginación. */
     public function index(Request $request)
     {
-        $filtros = $request->only('fecha', 'grupo', 'turno');
+        $filtros = [
+            'anio' => $request->input('anio') ?? now()->year,
+            'mes'  => $request->input('mes') ?? now()->month,
+        ];
 
         $registros = Salida::activos()
             ->filtrar($filtros)
@@ -21,7 +24,13 @@ class ProduccionController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('produccion.index', compact('registros', 'filtros'));
+        $anios = Salida::selectRaw('YEAR(fechasalida) as anio')
+            ->distinct()
+            ->whereNotNull('fechasalida')
+            ->orderByDesc('anio')
+            ->pluck('anio');
+
+        return view('produccion.index', compact('registros', 'filtros', 'anios'));
     }
 
     /** Formulario de creación. */
@@ -40,7 +49,7 @@ class ProduccionController extends Controller
 
         $salida = Salida::create($data);
 
-        return redirect()->route('produccion.index')
+        return redirect()->route('operaciones.index', ['tab' => 'produccion'])
             ->with('success', "Registro de producción #{$salida->id} creado correctamente.");
     }
 
@@ -57,7 +66,7 @@ class ProduccionController extends Controller
         abort_if($produccion->is_deleted, 404);
         $produccion->update($this->validar($request, $produccion->id));
 
-        return redirect()->route('produccion.index')
+        return redirect()->route('operaciones.index', ['tab' => 'produccion'])
             ->with('success', "Registro #{$produccion->id} actualizado.");
     }
 
@@ -66,7 +75,7 @@ class ProduccionController extends Controller
     {
         $produccion->update(['is_deleted' => 1]);
 
-        return redirect()->route('produccion.index')
+        return redirect()->route('operaciones.index', ['tab' => 'produccion'])
             ->with('success', "Registro #{$produccion->id} eliminado.");
     }
 

@@ -41,17 +41,14 @@ class Salida extends Model
         return $query->where('is_deleted', 0);
     }
 
-    /** Scope: aplica los filtros del listado (fecha, grupo, turno). */
+    /** Scope: aplica los filtros del listado (año y mes). */
     public function scopeFiltrar($query, array $filtros)
     {
-        if (!empty($filtros['fecha'])) {
-            $query->where('fechasalida', $filtros['fecha']);
+        if (!empty($filtros['anio'])) {
+            $query->whereYear('fechasalida', $filtros['anio']);
         }
-        if (!empty($filtros['grupo'])) {
-            $query->where('gruposalida', $filtros['grupo']);
-        }
-        if (!empty($filtros['turno'])) {
-            $query->where('turnosalida', $filtros['turno']);
+        if (!empty($filtros['mes'])) {
+            $query->whereMonth('fechasalida', $filtros['mes']);
         }
         return $query;
     }

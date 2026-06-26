@@ -12,7 +12,10 @@ class CalidadController extends Controller
     /** Listado con filtros y paginación. */
     public function index(Request $request)
     {
-        $filtros = $request->only('fecha', 'turno', 'reactor');
+        $filtros = [
+            'anio' => $request->input('anio') ?? now()->year,
+            'mes'  => $request->input('mes')  ?? now()->month,
+        ];
 
         $registros = AnalisisCalidad::activos()
             ->filtrar($filtros)
@@ -21,7 +24,13 @@ class CalidadController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('calidad.index', compact('registros', 'filtros'));
+        $anios = AnalisisCalidad::activos()
+            ->whereYear('fecha', '>', 2000)
+            ->selectRaw('DISTINCT YEAR(fecha) as anio')
+            ->orderByDesc('anio')
+            ->pluck('anio');
+
+        return view('calidad.index', compact('registros', 'filtros', 'anios'));
     }
 
     /** Formulario de creación. */
@@ -39,7 +48,7 @@ class CalidadController extends Controller
 
         $a = AnalisisCalidad::create($data);
 
-        return redirect()->route('calidad.index')
+        return redirect()->route('operaciones.index', ['tab' => 'calidad'])
             ->with('success', "Análisis de calidad #{$a->id} creado correctamente.");
     }
 
@@ -54,9 +63,10 @@ class CalidadController extends Controller
     public function update(Request $request, AnalisisCalidad $calidad)
     {
         abort_if($calidad->is_deleted, 404);
-        $calidad->update($this->validar($request, $calidad->id));
+        $data = $this->validar($request, $calidad->id);
+        $calidad->update($data);
 
-        return redirect()->route('calidad.index')
+        return redirect()->route('operaciones.index', ['tab' => 'calidad'])
             ->with('success', "Análisis #{$calidad->id} actualizado.");
     }
 
@@ -65,43 +75,35 @@ class CalidadController extends Controller
     {
         $calidad->update(['is_deleted' => 1]);
 
-        return redirect()->route('calidad.index')
+        return redirect()->route('operaciones.index', ['tab' => 'calidad'])
             ->with('success', "Análisis #{$calidad->id} eliminado.");
     }
 
     /**
      * Validación compartida por store/update.
-     * Unicidad por fecha + grupo + turno + reactor + hora
-     * (permite varias lecturas por turno, pero no dos iguales en el mismo reactor y hora).
      */
     private function validar(Request $request, ?int $ignoreId = null): array
     {
-        $unico = Rule::unique('analisiscalidad', 'fecha')
-            ->where(fn ($q) => $q
-                ->where('grupocalidad', $request->input('grupocalidad'))
-                ->where('turnocalidad', $request->input('turnocalidad'))
-                ->where('reactor', $request->input('reactor'))
-                ->where('hora', $request->input('hora'))
-                ->where('is_deleted', 0));
-        if ($ignoreId) {
-            $unico->ignore($ignoreId);
-        }
-
         $reglas = [
-            'fecha'        => ['required', 'date', $unico],
+            'fecha'        => ['required', 'date'],
             'hora'         => ['required', 'date_format:H:i'],
             'turnocalidad' => ['required', 'in:' . implode(',', AnalisisCalidad::TURNOS)],
-            'reactor'      => ['required', 'in:' . implode(',', AnalisisCalidad::REACTORES)],
+            'reactor1'     => ['nullable', 'boolean'],
+            'reactor2'     => ['nullable', 'boolean'],
+            'reactor3'     => ['nullable', 'boolean'],
+            'reactor4'     => ['nullable', 'boolean'],
             'filtro'       => ['nullable', 'in:' . implode(',', AnalisisCalidad::FILTROS)],
             'grupocalidad' => ['required', 'in:' . implode(',', AnalisisCalidad::GRUPOS)],
+            'humedad'      => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'pi'           => ['nullable', 'numeric', 'min:0'],
+            'pf'           => ['nullable', 'numeric', 'min:0'],
         ];
         foreach (array_keys(AnalisisCalidad::MEDICIONES) as $campo) {
+            if ($campo === 'humedad') continue;
             $reglas[$campo] = ['nullable', 'numeric', 'min:0'];
         }
 
-        return $request->validate($reglas, [
-            'fecha.unique' => 'Ya existe un análisis para esa fecha, grupo, turno, reactor y hora.',
-        ], [
+        return $request->validate($reglas, [], [
             'turnocalidad' => 'turno',
             'grupocalidad' => 'grupo',
         ]);

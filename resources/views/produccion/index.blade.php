@@ -13,24 +13,20 @@
 <form method="get" action="{{ route('produccion.index') }}" class="card card-body shadow-sm mb-3">
     <div class="row g-2 align-items-end">
         <div class="col-md-3">
-            <label class="form-label small">Fecha</label>
-            <input type="date" name="fecha" value="{{ $filtros['fecha'] ?? '' }}" class="form-control">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small">Grupo</label>
-            <select name="grupo" class="form-select">
+            <label class="form-label small">Año</label>
+            <select name="anio" class="form-select">
                 <option value="">Todos</option>
-                @foreach (Salida::GRUPOS as $g)
-                    <option value="{{ $g }}" @selected(($filtros['grupo'] ?? '') === $g)>Grupo {{ $g }}</option>
+                @foreach ($anios as $a)
+                    <option value="{{ $a }}" @selected(($filtros['anio'] ?? '') == $a)>{{ $a }}</option>
                 @endforeach
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label small">Turno</label>
-            <select name="turno" class="form-select">
+            <label class="form-label small">Mes</label>
+            <select name="mes" class="form-select">
                 <option value="">Todos</option>
-                @foreach (Salida::TURNOS as $t)
-                    <option value="{{ $t }}" @selected(($filtros['turno'] ?? '') === $t)>{{ $t }}</option>
+                @foreach (['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] as $key => $nombreMes)
+                    <option value="{{ $key + 1 }}" @selected(($filtros['mes'] ?? '') == ($key + 1))>{{ $nombreMes }}</option>
                 @endforeach
             </select>
         </div>
