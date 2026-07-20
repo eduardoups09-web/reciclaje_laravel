@@ -49,6 +49,16 @@
                         <li><a class="dropdown-item {{ request()->routeIs('saldos.*') ? 'active' : '' }}" href="{{ route('saldos.index') }}"><i class="bi bi-clipboard-data"></i> Saldos</a></li>
                     </ul>
                 </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ request()->routeIs('reportes-gerenciales.*', 'pablo.*') ? 'active' : '' }}"
+                       href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-graph-up"></i> Reportes Gerenciales
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {{ request()->routeIs('reportes-gerenciales.*') ? 'active' : '' }}" href="{{ route('reportes-gerenciales.index') }}"><i class="bi bi-file-earmark-bar-graph"></i> Roberto</a></li>
+                        <li><a class="dropdown-item {{ request()->routeIs('pablo.*') ? 'active' : '' }}" href="{{ route('pablo.index') }}"><i class="bi bi-file-earmark-bar-graph"></i> Pablo</a></li>
+                    </ul>
+                </li>
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item dropdown">

@@ -11,6 +11,8 @@ use App\Http\Controllers\MpImportController;
 use App\Http\Controllers\MpNacionalController;
 use App\Http\Controllers\OperacionController;
 use App\Http\Controllers\ProduccionController;
+use App\Http\Controllers\ReporteGerencialController;
+use App\Http\Controllers\ReporteGerencialPabloController;
 use App\Http\Controllers\SaldoController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('saldos', SaldoController::class)
         ->parameters(['saldos' => 'saldo'])
         ->except(['show']);
+    Route::post('saldos/autollenar', [SaldoController::class, 'autollenar'])->name('saldos.autollenar');
 
     // MP Importación
     Route::resource('mpimport', MpImportController::class)
@@ -69,5 +72,15 @@ Route::middleware('auth')->group(function () {
     // Movimiento Detalle
     Route::resource('movimiento-detalle', MovimientoDetalleController::class)
         ->parameters(['movimiento-detalle' => 'movimiento_detalle'])
+        ->except(['show']);
+
+    // Reportes Gerenciales - Roberto
+    Route::resource('reportes-gerenciales', ReporteGerencialController::class)
+        ->parameters(['reportes-gerenciales' => 'reporte'])
+        ->except(['show']);
+
+    // Reportes Gerenciales - Pablo
+    Route::resource('pablo', ReporteGerencialPabloController::class)
+        ->parameters(['pablo' => 'reporte'])
         ->except(['show']);
 });

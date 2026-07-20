@@ -39,15 +39,22 @@ class Saldo extends Model
 
     public function scopeFiltrar($query, array $filtros)
     {
-        if (!empty($filtros['fecha'])) {
-            $query->where('fechasaldo', $filtros['fecha']);
-        }
-        if (!empty($filtros['grupo'])) {
-            $query->where('gruposaldo', $filtros['grupo']);
-        }
-        if (!empty($filtros['turno'])) {
-            $query->where('turnosaldo', $filtros['turno']);
+        if (!empty($filtros['anio']) && !empty($filtros['mes'])) {
+            $query->whereYear('fechasaldo', $filtros['anio'])
+                  ->whereMonth('fechasaldo', $filtros['mes']);
         }
         return $query;
+    }
+
+    /**
+     * Retorna array de años que tienen registros en la tabla.
+     */
+    public static function aniosDisponibles(): array
+    {
+        return static::activos()
+            ->selectRaw('DISTINCT YEAR(fechasaldo) as anio')
+            ->orderBy('anio')
+            ->pluck('anio')
+            ->toArray();
     }
 }
