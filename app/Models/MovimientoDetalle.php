@@ -15,6 +15,7 @@ class MovimientoDetalle extends Model
 
     public const GRUPOS = ['1', '2'];
     public const TURNOS = ['Diurno', 'Nocturno'];
+    public const ESTADOS = [1 => 'Abierto', 2 => 'Cerrado', 3 => 'Aprobado'];
 
     public function scopeActivos($query)
     {

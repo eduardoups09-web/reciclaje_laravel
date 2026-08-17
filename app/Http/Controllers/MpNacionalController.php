@@ -29,7 +29,13 @@ class MpNacionalController extends Controller
 
     public function create()
     {
-        return view('mpnacional.form', ['mpnacional' => new MpNacional(), 'modo' => 'crear']);
+        $data = ['mpnacional' => new MpNacional(), 'modo' => 'crear'];
+
+        if (request()->ajax()) {
+            return view('mpnacional._form-modal', $data);
+        }
+
+        return view('mpnacional.form', $data);
     }
 
     public function store(Request $request)
@@ -41,6 +47,10 @@ class MpNacionalController extends Controller
 
         $m = MpNacional::create($data);
 
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "MP Nacional #{$m->id} creado correctamente."]);
+        }
+
         return redirect()->route('operaciones.index', ['tab' => 'mpnacional'])
             ->with('success', "MP Nacional #{$m->id} creado correctamente.");
     }
@@ -48,13 +58,23 @@ class MpNacionalController extends Controller
     public function edit(MpNacional $mpnacional)
     {
         abort_if($mpnacional->is_deleted, 404);
-        return view('mpnacional.form', ['mpnacional' => $mpnacional, 'modo' => 'editar']);
+        $data = ['mpnacional' => $mpnacional, 'modo' => 'editar'];
+
+        if (request()->ajax()) {
+            return view('mpnacional._form-modal', $data);
+        }
+
+        return view('mpnacional.form', $data);
     }
 
     public function update(Request $request, MpNacional $mpnacional)
     {
         abort_if($mpnacional->is_deleted, 404);
         $mpnacional->update($this->validar($request));
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "MP Nacional #{$mpnacional->id} actualizado."]);
+        }
 
         return redirect()->route('operaciones.index', ['tab' => 'mpnacional'])
             ->with('success', "MP Nacional #{$mpnacional->id} actualizado.");
@@ -74,7 +94,7 @@ class MpNacionalController extends Controller
             'fechanacional' => ['required', 'date'],
             'gruponacional' => ['required', 'in:' . implode(',', MpNacional::GRUPOS)],
             'turnonacional' => ['required', 'in:' . implode(',', MpNacional::TURNOS)],
-            'bateriatipo'   => ['nullable', 'in:' . implode(',', MpNacional::TIPOS_BATERIA)],
+            'bateriatipo'   => ['required', 'in:' . implode(',', MpNacional::TIPOS_BATERIA)],
             'pesobateria'   => ['nullable', 'integer', 'min:0'],
         ], [], [
             'fechanacional' => 'fecha',

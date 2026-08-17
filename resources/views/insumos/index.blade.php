@@ -40,7 +40,6 @@
                 <tr>
                     <th>Fecha</th><th>Grupo</th><th>Turno</th>
                     <th class="text-end">Carbonato de sodio</th>
-                    <th class="text-end">Cal</th>
                     <th>Usuario</th>
                     <th class="text-end">Acciones</th>
                 </tr>
@@ -52,7 +51,6 @@
                     <td><span class="badge bg-secondary">G{{ $r->grupoinsumo }}</span></td>
                     <td>{{ $r->turnoinsumo }}</td>
                     <td class="text-end">{{ !is_null($r->carbonatoSodio) ? number_format($r->carbonatoSodio) : '—' }}</td>
-                    <td class="text-end">{{ !is_null($r->cal) ? number_format($r->cal) : '—' }}</td>
                     <td class="small text-muted">{{ $r->usernameinsumo }}</td>
                     <td class="text-end text-nowrap">
                         <a href="{{ route('insumos.edit', $r) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
@@ -65,7 +63,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="text-center text-muted py-4">Sin registros.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Sin registros.</td></tr>
             @endforelse
             </tbody>
         </table>

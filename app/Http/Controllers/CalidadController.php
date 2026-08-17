@@ -36,7 +36,13 @@ class CalidadController extends Controller
     /** Formulario de creación. */
     public function create()
     {
-        return view('calidad.form', ['analisis' => new AnalisisCalidad(), 'modo' => 'crear']);
+        $data = ['analisis' => new AnalisisCalidad(), 'modo' => 'crear'];
+
+        if (request()->ajax()) {
+            return view('calidad._form-modal', $data);
+        }
+
+        return view('calidad.form', $data);
     }
 
     /** Guarda un nuevo registro. */
@@ -48,6 +54,10 @@ class CalidadController extends Controller
 
         $a = AnalisisCalidad::create($data);
 
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "Análisis de calidad #{$a->id} creado correctamente."]);
+        }
+
         return redirect()->route('operaciones.index', ['tab' => 'calidad'])
             ->with('success', "Análisis de calidad #{$a->id} creado correctamente.");
     }
@@ -56,7 +66,13 @@ class CalidadController extends Controller
     public function edit(AnalisisCalidad $calidad)
     {
         abort_if($calidad->is_deleted, 404);
-        return view('calidad.form', ['analisis' => $calidad, 'modo' => 'editar']);
+        $data = ['analisis' => $calidad, 'modo' => 'editar'];
+
+        if (request()->ajax()) {
+            return view('calidad._form-modal', $data);
+        }
+
+        return view('calidad.form', $data);
     }
 
     /** Actualiza un registro. */
@@ -65,6 +81,10 @@ class CalidadController extends Controller
         abort_if($calidad->is_deleted, 404);
         $data = $this->validar($request, $calidad->id);
         $calidad->update($data);
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "Análisis #{$calidad->id} actualizado."]);
+        }
 
         return redirect()->route('operaciones.index', ['tab' => 'calidad'])
             ->with('success', "Análisis #{$calidad->id} actualizado.");
@@ -88,12 +108,12 @@ class CalidadController extends Controller
             'fecha'        => ['required', 'date'],
             'hora'         => ['required', 'date_format:H:i'],
             'turnocalidad' => ['required', 'in:' . implode(',', AnalisisCalidad::TURNOS)],
-            'reactor1'     => ['nullable', 'boolean'],
-            'reactor2'     => ['nullable', 'boolean'],
-            'reactor3'     => ['nullable', 'boolean'],
-            'reactor4'     => ['nullable', 'boolean'],
-            'filtro'       => ['nullable', 'in:' . implode(',', AnalisisCalidad::FILTROS)],
+            'filtro'       => ['required', 'in:' . implode(',', AnalisisCalidad::FILTROS)],
             'grupocalidad' => ['required', 'in:' . implode(',', AnalisisCalidad::GRUPOS)],
+            'reactor1'     => ['required', 'boolean'],
+            'reactor2'     => ['required', 'boolean'],
+            'reactor3'     => ['required', 'boolean'],
+            'reactor4'     => ['required', 'boolean'],
             'humedad'      => ['nullable', 'numeric', 'min:0', 'max:100'],
             'pi'           => ['nullable', 'numeric', 'min:0'],
             'pf'           => ['nullable', 'numeric', 'min:0'],
@@ -103,10 +123,38 @@ class CalidadController extends Controller
             $reglas[$campo] = ['nullable', 'numeric', 'min:0'];
         }
 
-        return $request->validate($reglas, [], [
+        $data = $request->validate($reglas, [
+            'fecha.required'        => 'La fecha es obligatoria.',
+            'fecha.date'            => 'La fecha no es válida.',
+            'hora.required'         => 'La hora es obligatoria.',
+            'hora.date_format'      => 'La hora no tiene el formato correcto (HH:mm).',
+            'turnocalidad.required' => 'El turno es obligatorio.',
+            'turnocalidad.in'       => 'El turno seleccionado no es válido.',
+            'filtro.required'       => 'El filtro es obligatorio.',
+            'filtro.in'             => 'El filtro seleccionado no es válido.',
+            'grupocalidad.required' => 'El grupo es obligatorio.',
+            'grupocalidad.in'       => 'El grupo seleccionado no es válido.',
+            'humedad.numeric'       => 'La humedad debe ser un número.',
+            'humedad.min'           => 'La humedad no puede ser negativa.',
+            'humedad.max'           => 'La humedad no puede superar 100.',
+            'pi.numeric'            => 'El PI debe ser un número.',
+            'pi.min'                => 'El PI no puede ser negativo.',
+            'pf.numeric'            => 'El PF debe ser un número.',
+            'pf.min'                => 'El PF no puede ser negativo.',
+        ], [
             'turnocalidad' => 'turno',
             'grupocalidad' => 'grupo',
         ]);
+
+        $reactores = ['reactor1', 'reactor2', 'reactor3', 'reactor4'];
+        $algunoReactor = collect($reactores)->contains(fn($r) => $request->input($r) === '1');
+        if (!$algunoReactor) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'reactor1' => 'Debe seleccionar al menos un reactor.',
+            ]);
+        }
+
+        return $data;
     }
 
     private function username(): string

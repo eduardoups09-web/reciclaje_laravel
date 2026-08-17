@@ -49,11 +49,26 @@
         <div class="card-header bg-light fw-semibold">Productos recuperados (kg / unidades)</div>
         <div class="card-body row g-3">
             @foreach (Salida::CAMPOS_NUMERICOS as $campo => $etiqueta)
-                <div class="col-md-4 col-sm-6">
-                    <label class="form-label">{{ $etiqueta }}</label>
-                    <input type="number" min="0" step="1" name="{{ $campo }}" class="form-control"
-                           value="{{ old($campo, $salida->$campo) }}" placeholder="0">
-                </div>
+                @if (in_array($campo, Salida::CAMPOS_CON_FACTOR))
+                    <div class="col-md-4 col-sm-6">
+                        <label class="form-label">{{ $etiqueta }}</label>
+                        <div class="input-group">
+                            <input type="number" min="0" step="1" name="{{ $campo }}" class="form-control"
+                                   value="{{ old($campo, $salida->$campo) }}" placeholder="0">
+                            <select name="factor_{{ $campo }}" class="form-select" style="max-width: 90px;">
+                                @foreach (Salida::FACTORES as $f)
+                                    <option value="{{ $f }}" @selected(old("factor_{$campo}", 0.97) == $f)>{{ $f }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                @else
+                    <div class="col-md-4 col-sm-6">
+                        <label class="form-label">{{ $etiqueta }}</label>
+                        <input type="number" min="0" step="1" name="{{ $campo }}" class="form-control"
+                               value="{{ old($campo, $salida->$campo) }}" placeholder="0">
+                    </div>
+                @endif
             @endforeach
         </div>
         <div class="card-footer text-muted small">Deja en blanco los productos que no apliquen a este turno.</div>

@@ -35,6 +35,12 @@ class Salida extends Model
     public const GRUPOS = ['1', '2'];
     public const TURNOS = ['Diurno', 'Nocturno'];
 
+    /** Campos que llevan factor de rendimiento (0.95–0.99). */
+    public const CAMPOS_CON_FACTOR = ['metalico', 'rejilla', 'metalicofino', 'pastadesulfurada', 'pastasin'];
+
+    /** Valores disponibles para los combobox de factor. */
+    public const FACTORES = [0.95, 0.96, 0.97, 0.98, 0.99];
+
     /** Scope: solo registros no eliminados. */
     public function scopeActivos($query)
     {

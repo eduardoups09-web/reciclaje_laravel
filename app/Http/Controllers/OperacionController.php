@@ -19,7 +19,8 @@ class OperacionController extends Controller
 
         $filtros = [
             'fecha' => $request->input('fecha') ?? now()->toDateString(),
-            'turno' => $request->input('turno') ?? $turnoActual,
+            'turno' => $tab === 'movdetalle' ? $request->input('turno') : ($request->input('turno') ?? $turnoActual),
+            'grupo' => $request->input('grupo'),
         ];
 
         $registros = null;
@@ -30,6 +31,7 @@ class OperacionController extends Controller
                 $registros = Salida::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fechasalida', $v))
                     ->when($filtros['turno'], fn($q, $v) => $q->where('turnosalida', $v))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('gruposalida', $filtros['grupo']))
                     ->orderByDesc('fechasalida')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'produccion';
@@ -39,6 +41,7 @@ class OperacionController extends Controller
                 $registros = AnalisisCalidad::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fecha', $v))
                     ->when($filtros['turno'], fn($q, $v) => $q->where('turnocalidad', $v))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('grupocalidad', $filtros['grupo']))
                     ->orderByDesc('fecha')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'calidad';
@@ -48,6 +51,7 @@ class OperacionController extends Controller
                 $registros = MpImport::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fechaimport', $v))
                     ->when($filtros['turno'], fn($q, $v) => $q->where('turnoimport', $v))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('grupoimport', $filtros['grupo']))
                     ->orderByDesc('fechaimport')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'mpimport';
@@ -57,6 +61,7 @@ class OperacionController extends Controller
                 $registros = MpNacional::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fechanacional', $v))
                     ->when($filtros['turno'], fn($q, $v) => $q->where('turnonacional', $v))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('gruponacional', $filtros['grupo']))
                     ->orderByDesc('fechanacional')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'mpnacional';
@@ -66,6 +71,7 @@ class OperacionController extends Controller
                 $registros = Insumo::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fecha', $v))
                     ->when($filtros['turno'], fn($q, $v) => $q->where('turnoinsumo', $v))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('grupoinsumo', $filtros['grupo']))
                     ->orderByDesc('fecha')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'insumos';
@@ -74,7 +80,8 @@ class OperacionController extends Controller
             case 'movdetalle':
                 $registros = MovimientoDetalle::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fecha', $v))
-                    ->when($filtros['turno'], fn($q, $v) => $q->where('turno', $v))
+                    ->when(!empty($filtros['turno']), fn($q, $v) => $q->where('turno', $v))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('grupo', $filtros['grupo']))
                     ->orderByDesc('fecha')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'movimiento-detalle';

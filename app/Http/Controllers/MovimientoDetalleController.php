@@ -29,31 +29,69 @@ class MovimientoDetalleController extends Controller
 
     public function create()
     {
-        return view('movimientodetalle.form', ['movimientoDetalle' => new MovimientoDetalle(), 'modo' => 'crear']);
+        $data = ['movimientoDetalle' => new MovimientoDetalle(), 'modo' => 'crear'];
+
+        if (request()->ajax()) {
+            return view('movimientodetalle._form-modal', $data);
+        }
+
+        return view('movimientodetalle.form', $data);
     }
 
     public function store(Request $request)
     {
         $data = $this->validar($request);
-        $data['status_id']  = 1;
         $data['is_deleted'] = 0;
 
-        $m = MovimientoDetalle::create($data);
+        $creados = [];
+        $turnosMap = ['activar_diurno' => ['turno' => 'Diurno', 'campo_grupo' => 'grupo_diurno'],
+                       'activar_nocturno' => ['turno' => 'Nocturno', 'campo_grupo' => 'grupo_nocturno']];
+
+        foreach ($turnosMap as $key => $info) {
+            if ($request->filled($key)) {
+                $creados[] = MovimientoDetalle::create([
+                    'fecha'     => $data['fecha'],
+                    'grupo'     => $request->input($info['campo_grupo']),
+                    'turno'     => $info['turno'],
+                    'status_id' => $data['status_id'],
+                    'is_deleted' => 0,
+                ]);
+            }
+        }
+
+        $cantidad = count($creados);
+        $mensaje = $cantidad === 1
+            ? "Movimiento detalle #{$creados[0]->id} creado correctamente."
+            : "{$cantidad} movimientos detalle creados correctamente.";
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => $mensaje]);
+        }
 
         return redirect()->route('operaciones.index', ['tab' => 'movdetalle'])
-            ->with('success', "Movimiento detalle #{$m->id} creado correctamente.");
+            ->with('success', $mensaje);
     }
 
     public function edit(MovimientoDetalle $movimientoDetalle)
     {
         abort_if($movimientoDetalle->is_deleted, 404);
-        return view('movimientodetalle.form', ['movimientoDetalle' => $movimientoDetalle, 'modo' => 'editar']);
+        $data = ['movimientoDetalle' => $movimientoDetalle, 'modo' => 'editar'];
+
+        if (request()->ajax()) {
+            return view('movimientodetalle._form-modal', $data);
+        }
+
+        return view('movimientodetalle.form', $data);
     }
 
     public function update(Request $request, MovimientoDetalle $movimientoDetalle)
     {
         abort_if($movimientoDetalle->is_deleted, 404);
         $movimientoDetalle->update($this->validar($request));
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "Movimiento detalle #{$movimientoDetalle->id} actualizado."]);
+        }
 
         return redirect()->route('operaciones.index', ['tab' => 'movdetalle'])
             ->with('success', "Movimiento detalle #{$movimientoDetalle->id} actualizado.");
@@ -69,13 +107,48 @@ class MovimientoDetalleController extends Controller
 
     private function validar(Request $request): array
     {
-        return $request->validate([
-            'fecha' => ['required', 'date'],
-            'grupo' => ['required', 'in:' . implode(',', MovimientoDetalle::GRUPOS)],
-            'turno' => ['required', 'in:' . implode(',', MovimientoDetalle::TURNOS)],
-        ], [], [
-            'grupo' => 'grupo',
-            'turno' => 'turno',
+        $esCrear = $request->isMethod('post');
+        $grupos = implode(',', MovimientoDetalle::GRUPOS);
+
+        if ($esCrear) {
+            $rules = [
+                'fecha'             => ['required', 'date'],
+                'status_id'         => ['required', 'in:1,2,3'],
+                'activar_diurno'    => ['nullable'],
+                'activar_nocturno'  => ['nullable'],
+                'grupo_diurno'      => ['nullable', "in:{$grupos}"],
+                'grupo_nocturno'    => ['nullable', "in:{$grupos}"],
+            ];
+
+            $request->validate([
+                'activar_diurno'   => ['required_without:activar_nocturno', 'nullable'],
+                'activar_nocturno' => ['required_without:activar_diurno', 'nullable'],
+            ], [
+                'activar_diurno.required_without' => 'Debe seleccionar al menos un turno.',
+                'activar_nocturno.required_without' => 'Debe seleccionar al menos un turno.',
+            ]);
+
+            if ($request->filled('activar_diurno')) {
+                $rules['grupo_diurno'] = ['required', "in:{$grupos}"];
+            }
+            if ($request->filled('activar_nocturno')) {
+                $rules['grupo_nocturno'] = ['required', "in:{$grupos}"];
+            }
+        } else {
+            $rules = [
+                'fecha'     => ['required', 'date'],
+                'grupo'     => ['required', "in:{$grupos}"],
+                'turno'     => ['required', 'in:' . implode(',', MovimientoDetalle::TURNOS)],
+                'status_id' => ['required', 'in:1,2,3'],
+            ];
+        }
+
+        return $request->validate($rules, [], [
+            'grupo'           => 'grupo',
+            'grupo_diurno'    => 'grupo diurno',
+            'grupo_nocturno'  => 'grupo nocturno',
+            'turno'           => 'turno',
+            'status_id'       => 'estado',
         ]);
     }
 

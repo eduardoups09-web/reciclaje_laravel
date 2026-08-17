@@ -29,7 +29,13 @@ class InsumoController extends Controller
 
     public function create()
     {
-        return view('insumos.form', ['insumo' => new Insumo(), 'modo' => 'crear']);
+        $data = ['insumo' => new Insumo(), 'modo' => 'crear'];
+
+        if (request()->ajax()) {
+            return view('insumos._form-modal', $data);
+        }
+
+        return view('insumos.form', $data);
     }
 
     public function store(Request $request)
@@ -41,6 +47,10 @@ class InsumoController extends Controller
 
         $i = Insumo::create($data);
 
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "Insumo #{$i->id} creado correctamente."]);
+        }
+
         return redirect()->route('operaciones.index', ['tab' => 'insumos'])
             ->with('success', "Insumo #{$i->id} creado correctamente.");
     }
@@ -48,13 +58,23 @@ class InsumoController extends Controller
     public function edit(Insumo $insumo)
     {
         abort_if($insumo->is_deleted, 404);
-        return view('insumos.form', ['insumo' => $insumo, 'modo' => 'editar']);
+        $data = ['insumo' => $insumo, 'modo' => 'editar'];
+
+        if (request()->ajax()) {
+            return view('insumos._form-modal', $data);
+        }
+
+        return view('insumos.form', $data);
     }
 
     public function update(Request $request, Insumo $insumo)
     {
         abort_if($insumo->is_deleted, 404);
         $insumo->update($this->validar($request));
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "Insumo #{$insumo->id} actualizado."]);
+        }
 
         return redirect()->route('operaciones.index', ['tab' => 'insumos'])
             ->with('success', "Insumo #{$insumo->id} actualizado.");

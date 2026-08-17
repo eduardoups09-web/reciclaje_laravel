@@ -29,7 +29,13 @@ class MpImportController extends Controller
 
     public function create()
     {
-        return view('mpimport.form', ['mpimport' => new MpImport(), 'modo' => 'crear']);
+        $data = ['mpimport' => new MpImport(), 'modo' => 'crear'];
+
+        if (request()->ajax()) {
+            return view('mpimport._form-modal', $data);
+        }
+
+        return view('mpimport.form', $data);
     }
 
     public function store(Request $request)
@@ -41,6 +47,10 @@ class MpImportController extends Controller
 
         $m = MpImport::create($data);
 
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "MP Importación #{$m->id} creado correctamente."]);
+        }
+
         return redirect()->route('operaciones.index', ['tab' => 'mpimport'])
             ->with('success', "MP Importación #{$m->id} creado correctamente.");
     }
@@ -48,13 +58,23 @@ class MpImportController extends Controller
     public function edit(MpImport $mpimport)
     {
         abort_if($mpimport->is_deleted, 404);
-        return view('mpimport.form', ['mpimport' => $mpimport, 'modo' => 'editar']);
+        $data = ['mpimport' => $mpimport, 'modo' => 'editar'];
+
+        if (request()->ajax()) {
+            return view('mpimport._form-modal', $data);
+        }
+
+        return view('mpimport.form', $data);
     }
 
     public function update(Request $request, MpImport $mpimport)
     {
         abort_if($mpimport->is_deleted, 404);
         $mpimport->update($this->validar($request));
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => "MP Importación #{$mpimport->id} actualizado."]);
+        }
 
         return redirect()->route('operaciones.index', ['tab' => 'mpimport'])
             ->with('success', "MP Importación #{$mpimport->id} actualizado.");
@@ -74,7 +94,7 @@ class MpImportController extends Controller
             'fechaimport'      => ['required', 'date'],
             'grupoimport'      => ['required', 'in:' . implode(',', MpImport::GRUPOS)],
             'turnoimport'      => ['required', 'in:' . implode(',', MpImport::TURNOS)],
-            'bateriatipoimport' => ['nullable', 'in:' . implode(',', MpImport::TIPOS_BATERIA)],
+            'bateriatipoimport' => ['required', 'in:' . implode(',', MpImport::TIPOS_BATERIA)],
             'pesobateriaimport' => ['nullable', 'integer', 'min:0'],
             'metalicoimport'   => ['nullable', 'integer', 'min:0'],
             'pastaimport'      => ['nullable', 'integer', 'min:0'],

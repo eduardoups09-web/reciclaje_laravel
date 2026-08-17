@@ -53,11 +53,6 @@
                 <input type="number" min="0" step="1" name="carbonatoSodio" class="form-control"
                        value="{{ old('carbonatoSodio', $insumo->carbonatoSodio) }}" placeholder="0">
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Cal</label>
-                <input type="number" min="0" step="1" name="cal" class="form-control"
-                       value="{{ old('cal', $insumo->cal) }}" placeholder="0">
-            </div>
         </div>
     </div>
 
