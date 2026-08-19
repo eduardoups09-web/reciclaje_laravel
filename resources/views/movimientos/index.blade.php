@@ -12,7 +12,7 @@
 @php
     $meses = [1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',
               7=>'Julio',8=>'Agosto',9=>'Septiembre',10=>'Octubre',11=>'Noviembre',12=>'Diciembre'];
-    $estados = [1 => 'Abierto', 2 => 'Cerrado', 3 => 'Aprobado'];
+    $estados = [1 => 'Abierto', 2 => 'Cerrado', 4 => 'Aprobado'];
     $all = $all ?? $registros->getCollection();
     $f = fn($v) => number_format($v ?? 0, 0, ',', '.');
     $f2 = fn($v) => number_format($v ?? 0, 2, ',', '.');
@@ -55,7 +55,7 @@
         <table id="tabla-movimientos" class="table table-hover table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th class="text-center text-white fw-semibold" style="background-color:#28a745;" colspan="4">Principal</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#28a745;" colspan="3">Principal</th>
                     <th class="text-center text-white fw-semibold" style="background-color:#17a2b8;" colspan="2">Baterías Nacionales</th>
                     <th class="text-center text-white fw-semibold" style="background-color:#fd7e14;" colspan="2">Baterías Importadas</th>
                     <th class="text-center text-white fw-semibold" style="background-color:#dc3545;" colspan="3">MP Importada</th>
@@ -66,7 +66,6 @@
                 <tr>
                     <th style="background-color:#d4edda;">Fecha</th>
                     <th class="text-center" style="background-color:#d4edda;">Turno</th>
-                    <th class="text-center" style="background-color:#d4edda;">Grupo</th>
                     <th class="text-center" style="background-color:#d4edda;">Estado</th>
                     <th class="text-end" style="background-color:#cfe2f3;">Bat. Nac.</th>
                     <th style="background-color:#cfe2f3;">Tipo Bat. Nac.</th>
@@ -89,7 +88,7 @@
                     <th class="text-end" style="background-color:#e2d5f1;">%Humedad</th>
                 </tr>
                 <tr class="table-warning fw-bold">
-                    <td colspan="4">TOTALES</td>
+                    <td colspan="3">TOTALES</td>
                     <td class="text-end">{{ $f($all->sum('pesobateria')) }}</td>
                     <td></td>
                     <td class="text-end">{{ $f($all->sum('pesobateriaimport')) }}</td>
@@ -107,8 +106,8 @@
                     <td class="text-end">{{ $f($all->sum('salidas_abskg')) }}</td>
                     <td class="text-end">{{ $f($all->sum('salidas_separadorkg')) }}</td>
                     <td class="text-end">{{ $f($all->sum('salidas_descargas')) }}</td>
-                    <td class="text-end">{{ $all->count() > 0 ? $f2($all->avg('calidad_azufre')) : '0.00' }}</td>
-                    <td class="text-end">{{ $all->count() > 0 ? $f2($all->avg('calidad_humedad')) : '0.00' }}</td>
+                    <td class="text-end">{{ $promedioCalidad ? $f2($promedioCalidad->azufre) : '0.00' }}</td>
+                    <td class="text-end">{{ $promedioCalidad ? $f2($promedioCalidad->humedad) : '0.00' }}</td>
                 </tr>
             </thead>
             <tbody>
@@ -116,7 +115,6 @@
                 <tr>
                     <td class="fw-semibold">{{ $r->fecha }}</td>
                     <td class="text-center">{{ $r->turno }}</td>
-                    <td class="text-center">{{ $r->grupo }}</td>
                     <td class="text-center">
                         @php
                             $estiloStatus = match($r->status_id) {
@@ -150,7 +148,7 @@
                     <td class="text-end">{{ $f2($r->calidad_humedad) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="23" class="text-center text-muted py-4">Sin registros. Seleccione año y mes.</td></tr>
+                <tr><td colspan="22" class="text-center text-muted py-4">Sin registros. Seleccione año y mes.</td></tr>
             @endforelse
             </tbody>
         </table>

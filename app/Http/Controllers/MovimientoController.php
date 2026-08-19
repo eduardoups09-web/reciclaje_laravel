@@ -22,14 +22,53 @@ class MovimientoController extends Controller
         $whereYear  = fn($col) => fn($q) => $q->whereYear($col, $anio);
         $whereMonth = fn($col) => fn($q) => $q->whereMonth($col, $mes);
 
-        $registros = DB::table('movimientodetalle')
+        $fechasUnicas = DB::table('movimientodetalle')
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fecha'))
             ->when($mes, $whereMonth('fecha'))
-            ->select('fecha', 'grupo', 'turno', DB::raw('MAX(status_id) as status_id'))
-            ->groupBy('fecha', 'grupo', 'turno')
+            ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turno")
+            ->unionAll(
+                DB::table('mpnacional')
+                    ->where('is_deleted', 0)
+                    ->when($anio, $whereYear('fechanacional'))
+                    ->when($mes, $whereMonth('fechanacional'))
+                    ->selectRaw("DATE_FORMAT(fechanacional,'%Y-%m-%d') as fecha, turnonacional as turno")
+            )
+            ->unionAll(
+                DB::table('mpimport')
+                    ->where('is_deleted', 0)
+                    ->when($anio, $whereYear('fechaimport'))
+                    ->when($mes, $whereMonth('fechaimport'))
+                    ->selectRaw("DATE_FORMAT(fechaimport,'%Y-%m-%d') as fecha, turnoimport as turno")
+            )
+            ->unionAll(
+                DB::table('insumos')
+                    ->where('is_deleted', 0)
+                    ->when($anio, $whereYear('fecha'))
+                    ->when($mes, $whereMonth('fecha'))
+                    ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turnoinsumo as turno")
+            )
+            ->unionAll(
+                DB::table('salidas')
+                    ->where('is_deleted', 0)
+                    ->when($anio, $whereYear('fechasalida'))
+                    ->when($mes, $whereMonth('fechasalida'))
+                    ->selectRaw("DATE_FORMAT(fechasalida,'%Y-%m-%d') as fecha, turnosalida as turno")
+            )
+            ->unionAll(
+                DB::table('analisiscalidad')
+                    ->where('is_deleted', 0)
+                    ->when($anio, $whereYear('fecha'))
+                    ->when($mes, $whereMonth('fecha'))
+                    ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turnocalidad as turno")
+            )
+            ->distinct()
+            ->orderBy('fecha')
+            ->orderBy('turno')
             ->get()
-            ->keyBy(fn($r) => "{$r->fecha}-{$r->grupo}-{$r->turno}");
+            ->keyBy(fn($r) => "{$r->fecha}-{$r->turno}");
+
+        $registros = $fechasUnicas;
 
         if ($registros->isEmpty()) {
             return view('movimientos.index', [
@@ -45,7 +84,7 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fechanacional'))
             ->when($mes, $whereMonth('fechanacional'))
-            ->selectRaw("CONCAT(fechanacional,'-',gruponacional,'-',turnonacional) as k,
+            ->selectRaw("CONCAT(DATE_FORMAT(fechanacional,'%Y-%m-%d'),'-',turnonacional) as k,
                 SUM(pesobateria) as pesobateria,
                 GROUP_CONCAT(DISTINCT bateriatipo SEPARATOR ', ') as bateriatipo")
             ->groupBy('k')
@@ -56,7 +95,7 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fechaimport'))
             ->when($mes, $whereMonth('fechaimport'))
-            ->selectRaw("CONCAT(fechaimport,'-',grupoimport,'-',turnoimport) as k,
+            ->selectRaw("CONCAT(DATE_FORMAT(fechaimport,'%Y-%m-%d'),'-',turnoimport) as k,
                 SUM(pesobateriaimport) as pesobateriaimport,
                 GROUP_CONCAT(DISTINCT bateriatipoimport SEPARATOR ', ') as bateriatipoimport,
                 SUM(metalicoimport) as metalicoimport,
@@ -70,7 +109,7 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fecha'))
             ->when($mes, $whereMonth('fecha'))
-            ->selectRaw("CONCAT(fecha,'-',grupoinsumo,'-',turnoinsumo) as k,
+            ->selectRaw("CONCAT(DATE_FORMAT(fecha,'%Y-%m-%d'),'-',turnoinsumo) as k,
                 SUM(carbonatoSodio) as carbonatoSodio")
             ->groupBy('k')
             ->get()
@@ -80,7 +119,7 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fechasalida'))
             ->when($mes, $whereMonth('fechasalida'))
-            ->selectRaw("CONCAT(fechasalida,'-',gruposalida,'-',turnosalida) as k,
+            ->selectRaw("CONCAT(DATE_FORMAT(fechasalida,'%Y-%m-%d'),'-',turnosalida) as k,
                 SUM(metalico * COALESCE(calculablemeta, 0.97)) as salidas_metalico,
                 SUM(rejilla * COALESCE(calculablereji, 0.97)) as salidas_rejilla,
                 SUM(metalicofino * COALESCE(calculablemetafino, 0.97)) as salidas_metalicofino,
@@ -98,26 +137,44 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fecha'))
             ->when($mes, $whereMonth('fecha'))
-            ->selectRaw("CONCAT(fecha,'-',grupocalidad,'-',turnocalidad) as k,
+            ->selectRaw("CONCAT(DATE_FORMAT(fecha,'%Y-%m-%d'),'-',turnocalidad) as k,
                 AVG(azufre) as azufre,
                 AVG(humedad) as humedad")
             ->groupBy('k')
             ->get()
             ->keyBy('k');
 
-        $consolidados = $registros->map(function ($r) use ($nacMap, $impMap, $insMap, $salMap, $calMap) {
-            $k = "{$r->fecha}-{$r->grupo}-{$r->turno}";
+        $promedioCalidad = DB::table('analisiscalidad')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fecha'))
+            ->when($mes, $whereMonth('fecha'))
+            ->selectRaw('AVG(NULLIF(azufre, 0)) as azufre, AVG(NULLIF(humedad, 0)) as humedad')
+            ->first();
+
+        $statusMap = DB::table('movimientodetalle')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fecha'))
+            ->when($mes, $whereMonth('fecha'))
+            ->selectRaw("CONCAT(DATE_FORMAT(fecha,'%Y-%m-%d'),'-',turno) as k,
+                MAX(status_id) as status_id")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $consolidados = $registros->map(function ($r) use ($nacMap, $impMap, $insMap, $salMap, $calMap, $statusMap) {
+            $k = "{$r->fecha}-{$r->turno}";
             $nac = $nacMap->get($k);
             $imp = $impMap->get($k);
             $ins = $insMap->get($k);
             $sal = $salMap->get($k);
             $cal = $calMap->get($k);
+            $status = $statusMap->get($k);
 
             $m = new stdClass();
             $m->fecha    = $r->fecha;
             $m->turno    = $r->turno;
-            $m->grupo    = $r->grupo;
-            $m->status_id = $r->status_id;
+            $m->grupo    = '-';
+            $m->status_id = $status->status_id ?? 1;
 
             $m->pesobateria      = $nac->pesobateria ?? 0;
             $m->bateriatipo       = $nac->bateriatipo ?? '';
@@ -144,19 +201,13 @@ class MovimientoController extends Controller
             $m->calidad_humedad = $cal->humedad ?? 0;
 
             return $m;
-        })->sortByDesc('fecha')->sortBy('grupo')->sortBy('turno')->values();
-
-        $paginados = new \Illuminate\Pagination\LengthAwarePaginator(
-            $consolidados->forPage(1, 25),
-            $consolidados->count(),
-            25,
-            $request->query(),
-            ['path' => route('movimientos.index')]
-        );
+        })->sortBy(fn($r) => $r->fecha . '-' . $r->turno)
+          ->values();
 
         return view('movimientos.index', [
-            'registros' => $paginados,
+            'registros' => $consolidados,
             'all'       => $consolidados,
+            'promedioCalidad' => $promedioCalidad,
             'filtros'   => $filtros,
             'anios'     => $this->getAnios(),
         ]);
