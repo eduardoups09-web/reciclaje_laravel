@@ -2,56 +2,26 @@
 @section('titulo', 'Movimientos')
 
 @section('contenido')
+<style>
+    #tabla-movimientos td,
+    #tabla-movimientos th {
+        border: 1px solid #dee2e6 !important;
+    }
+</style>
+
 @php
-    use App\Models\Movimiento;
     $meses = [1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',
               7=>'Julio',8=>'Agosto',9=>'Septiembre',10=>'Octubre',11=>'Noviembre',12=>'Diciembre'];
-
-    $secciones = Movimiento::SECCIONES;
-
-    // Contar columnas totales
-    $totalCols = 4; // Fecha, Grupo, Turno, Estado
-    foreach ($secciones as $campos) {
-        $totalCols += count($campos);
-    }
-
-    // Colores por sección
-    $coloresSeccion = [
-        'Producción (salidas)'          => 'text-primary',
-        'Materia prima / Importación'   => 'text-info',
-        'Insumos'                       => 'text-warning',
-        'Ingresos'                      => 'text-success',
-        'Bodega y balance'              => 'text-secondary',
-        'Saldos'                        => 'text-dark',
-        'Calidad'                       => 'text-danger',
-    ];
-
-    $bgSeccion = [
-        'Producción (salidas)'          => 'table-primary',
-        'Materia prima / Importación'   => 'table-info',
-        'Insumos'                       => 'table-warning',
-        'Ingresos'                      => 'table-success',
-        'Bodega y balance'              => 'table-secondary',
-        'Saldos'                        => 'table-dark',
-        'Calidad'                       => 'table-danger',
-    ];
-
-    function fmtMov($val) {
-        if (is_null($val) || $val === '') return '—';
-        if (is_numeric($val)) {
-            $fmt = ($val == floor($val) && abs($val) < 10000) ? number_format($val, 0) : number_format($val, 2);
-            return $fmt;
-        }
-        return $val;
-    }
+    $estados = [1 => 'Abierto', 2 => 'Cerrado', 3 => 'Aprobado'];
+    $all = $all ?? $registros->getCollection();
+    $f = fn($v) => number_format($v ?? 0, 0, ',', '.');
+    $f2 = fn($v) => number_format($v ?? 0, 2, ',', '.');
 @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0"><i class="bi bi-table text-success"></i> Movimientos consolidados</h3>
+    <h3 class="mb-0"><i class="bi bi-table text-success"></i> Control de Movimientos</h3>
 </div>
-<p class="text-muted">Datos agrupados por <strong>fecha · grupo · turno</strong> con el consolidado de todas las tablas.</p>
 
-{{-- Filtros --}}
 <form method="get" action="{{ route('movimientos.index') }}" class="card card-body shadow-sm mb-3">
     <div class="row g-2 align-items-end">
         <div class="col-md-2">
@@ -77,79 +47,116 @@
     </div>
 </form>
 
-<div class="text-muted small mb-2">{{ count($registros) }} turno(s) encontrados.</div>
+<div class="text-muted small mb-2">{{ $all->count() }} turno(s) encontrados.</div>
 
+@if ($all->isNotEmpty())
 <div class="card shadow-sm">
-    <div class="table-responsive" style="overflow-x: auto;">
-        <table class="table table-sm align-middle mb-0" style="font-size: 0.78rem;">
+    <div class="table-responsive">
+        <table id="tabla-movimientos" class="table table-hover table-sm align-middle mb-0">
             <thead>
-                {{-- Fila 1: Encabezados de sección --}}
-                <tr class="table-light">
-                    <th rowspan="2" class="text-center" style="min-width:90px;">Fecha</th>
-                    <th rowspan="2" class="text-center" style="min-width:55px;">Grupo</th>
-                    <th rowspan="2" class="text-center" style="min-width:80px;">Turno</th>
-                    <th rowspan="2" class="text-center" style="min-width:80px;">Estado</th>
-                    @foreach ($secciones as $titulo => $campos)
-                        <th colspan="{{ count($campos) }}" class="text-center {{ $coloresSeccion[$titulo] ?? '' }} fw-bold" style="border-left: 2px solid #dee2e6;">
-                            {{ $titulo }}
-                        </th>
-                    @endforeach
+                <tr>
+                    <th class="text-center text-white fw-semibold" style="background-color:#28a745;" colspan="4">Principal</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#17a2b8;" colspan="2">Baterías Nacionales</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#fd7e14;" colspan="2">Baterías Importadas</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#dc3545;" colspan="3">MP Importada</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#e0a800;" colspan="1">Insumos</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#17a2b8;" colspan="9">Producción</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#6f42c1;" colspan="2">Calidad</th>
                 </tr>
-                {{-- Fila 2: Nombres de columna --}}
-                <tr class="table-light">
-                    @foreach ($secciones as $titulo => $campos)
-                        @foreach ($campos as $col => $etiqueta)
-                            <th class="text-center {{ $coloresSeccion[$titulo] ?? '' }}" style="min-width:80px; border-left: 1px solid #dee2e6; font-size:0.7rem;">
-                                {{ $etiqueta }}
-                            </th>
-                        @endforeach
-                    @endforeach
+                <tr>
+                    <th style="background-color:#d4edda;">Fecha</th>
+                    <th class="text-center" style="background-color:#d4edda;">Turno</th>
+                    <th class="text-center" style="background-color:#d4edda;">Grupo</th>
+                    <th class="text-center" style="background-color:#d4edda;">Estado</th>
+                    <th class="text-end" style="background-color:#cfe2f3;">Bat. Nac.</th>
+                    <th style="background-color:#cfe2f3;">Tipo Bat. Nac.</th>
+                    <th class="text-end" style="background-color:#fce4d6;">Bat. Imp.</th>
+                    <th style="background-color:#fce4d6;">Tipo Bat. Imp.</th>
+                    <th class="text-end" style="background-color:#f8d7da;">Met. Imp.</th>
+                    <th class="text-end" style="background-color:#f8d7da;">Pasta</th>
+                    <th class="text-end" style="background-color:#f8d7da;">Placas</th>
+                    <th class="text-end" style="background-color:#fff3cd;">Carb. Sodio</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Metálico</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Rejilla</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Met. Fino</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Pasta Des.</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Pasta Sin</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">PP</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">ABS</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Sep.</th>
+                    <th class="text-end" style="background-color:#d1ecf1;">Desc.</th>
+                    <th class="text-end" style="background-color:#e2d5f1;">%Azufre</th>
+                    <th class="text-end" style="background-color:#e2d5f1;">%Humedad</th>
+                </tr>
+                <tr class="table-warning fw-bold">
+                    <td colspan="4">TOTALES</td>
+                    <td class="text-end">{{ $f($all->sum('pesobateria')) }}</td>
+                    <td></td>
+                    <td class="text-end">{{ $f($all->sum('pesobateriaimport')) }}</td>
+                    <td></td>
+                    <td class="text-end">{{ $f($all->sum('metalicoimport')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('pastaimport')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('placasimport')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('carbonatoSodio')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_metalico')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_rejilla')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_metalicofino')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_pastadesulfurada')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_pastasin')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_polipropilenokg')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_abskg')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_separadorkg')) }}</td>
+                    <td class="text-end">{{ $f($all->sum('salidas_descargas')) }}</td>
+                    <td class="text-end">{{ $all->count() > 0 ? $f2($all->avg('calidad_azufre')) : '0.00' }}</td>
+                    <td class="text-end">{{ $all->count() > 0 ? $f2($all->avg('calidad_humedad')) : '0.00' }}</td>
                 </tr>
             </thead>
             <tbody>
-            @php $porFecha = $registros->groupBy('fecha'); @endphp
-            @forelse ($porFecha as $fecha => $filasFecha)
-                {{-- Encabezado de FECHA --}}
-                <tr class="table-success">
-                    <td colspan="{{ $totalCols }}" class="fw-bold">
-                        <i class="bi bi-calendar3"></i> {{ \Carbon\Carbon::parse($fecha)->locale('es')->translatedFormat('l, d \d\e F \d\e Y') }}
+            @forelse ($registros as $r)
+                <tr>
+                    <td class="fw-semibold">{{ $r->fecha }}</td>
+                    <td class="text-center">{{ $r->turno }}</td>
+                    <td class="text-center">{{ $r->grupo }}</td>
+                    <td class="text-center">
+                        @php
+                            $estiloStatus = match($r->status_id) {
+                                3 => 'text-success',
+                                2 => 'text-warning',
+                                default => 'text-dark',
+                            };
+                        @endphp
+                        <span class="{{ $estiloStatus }}">{{ $estados[$r->status_id] ?? 'N/A' }}</span>
                     </td>
+                    <td class="text-end">{{ $f($r->pesobateria) }}</td>
+                    <td>{{ $r->bateriatipo }}</td>
+                    <td class="text-end">{{ $f($r->pesobateriaimport) }}</td>
+                    <td>{{ $r->bateriatipoimport }}</td>
+                    <td class="text-end">{{ $f($r->metalicoimport) }}</td>
+                    <td class="text-end">{{ $f($r->pastaimport) }}</td>
+                    <td class="text-end">{{ $f($r->placasimport) }}</td>
+                    <td class="text-end">{{ $f($r->carbonatoSodio) }}</td>
+                    <td class="text-end fw-bold">{{ $f($r->salidas_metalico) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_rejilla) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_metalicofino) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_pastadesulfurada) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_pastasin) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_polipropilenokg) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_abskg) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_separadorkg) }}</td>
+                    <td class="text-end">{{ $f($r->salidas_descargas) }}</td>
+                    <td class="text-end text-white fw-bold" style="background-color: {{ ($r->calidad_azufre > 0.99) ? '#dc3545' : '#28a745' }};">
+                        {{ $f2($r->calidad_azufre) }}
+                    </td>
+                    <td class="text-end">{{ $f2($r->calidad_humedad) }}</td>
                 </tr>
-                @foreach ($filasFecha->groupBy('grupo') as $grupo => $filasGrupo)
-                    {{-- Subencabezado de GRUPO --}}
-                    <tr class="table-light">
-                        <td colspan="{{ $totalCols }}" class="ps-4 text-muted small fw-semibold">
-                            <i class="bi bi-people"></i> Grupo {{ $grupo }}
-                        </td>
-                    </tr>
-                    {{-- Filas de TURNO --}}
-                    @foreach ($filasGrupo as $r)
-                        <tr>
-                            <td class="fw-semibold">{{ $r->fecha }}</td>
-                            <td class="text-center"><span class="badge bg-secondary">G{{ $r->grupo }}</span></td>
-                            <td>{{ $r->turno }}</td>
-                            <td>
-                                @if ($r->status_id == 3)
-                                    <span class="badge bg-success">Aprobado</span>
-                                @else
-                                    <span class="badge bg-warning text-dark">Registrado</span>
-                                @endif
-                            </td>
-                            @foreach ($secciones as $titulo => $campos)
-                                @foreach ($campos as $col => $etiqueta)
-                                    <td class="text-end {{ $coloresSeccion[$titulo] ?? '' }}" style="border-left: 1px solid #dee2e6;">
-                                        {{ fmtMov($r->$col) }}
-                                    </td>
-                                @endforeach
-                            @endforeach
-                        </tr>
-                    @endforeach
-                @endforeach
             @empty
-                <tr><td colspan="{{ $totalCols }}" class="text-center text-muted py-4">Sin registros. Seleccione año y mes para consultar.</td></tr>
+                <tr><td colspan="23" class="text-center text-muted py-4">Sin registros. Seleccione año y mes.</td></tr>
             @endforelse
             </tbody>
         </table>
     </div>
 </div>
+@else
+    <div class="text-center text-muted py-4">Sin registros. Seleccione año y mes.</div>
+@endif
 @endsection

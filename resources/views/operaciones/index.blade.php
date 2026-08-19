@@ -227,7 +227,7 @@ use App\Models\MovimientoDetalle;
                 @break
 
                 @case('produccion')
-                    <thead class="table-light">
+                    <thead class="table-success">
                         <tr>
                             <th>Fecha</th><th>Grupo</th><th>Turno</th>
                             <th class="text-end">Metálico</th><th class="text-end">Rejilla</th>
@@ -263,6 +263,23 @@ use App\Models\MovimientoDetalle;
                             <tr><td colspan="14" class="text-center text-muted py-4">Sin registros.</td></tr>
                         @endforelse
                     </tbody>
+                    @if(isset($totales) && count($totales))
+                    <tfoot class="table-success fw-bold">
+                        <tr>
+                            <td colspan="3">TOTALES</td>
+                            <td class="text-end">{{ number_format($totales['metalico']['calculado'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['rejilla']['calculado'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['metalicofino']['calculado'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['pastadesulfurada']['calculado'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['pastasin']['calculado'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['polipropilenokg'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['abskg'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['separadorkg'] ?? 0) }}</td>
+                            <td class="text-end">{{ number_format($totales['descargas'] ?? 0) }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                    @endif
                 @break
 
                 @case('calidad')

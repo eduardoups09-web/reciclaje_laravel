@@ -53,11 +53,13 @@
                     <div class="col-md-4 col-sm-6">
                         <label class="form-label">{{ $etiqueta }}</label>
                         <div class="input-group">
-                            <input type="number" min="0" step="1" name="{{ $campo }}" class="form-control"
+                            <input type="number" min="0" step="1" name="{{ $campo }}" class="form-control campo-cantidad"
+                                   data-campo="{{ $campo }}" data-columna="{{ Salida::CAMPOS_FACTOR_MAP[$campo] }}"
                                    value="{{ old($campo, $salida->$campo) }}" placeholder="0">
-                            <select name="factor_{{ $campo }}" class="form-select" style="max-width: 90px;">
+                            <select name="factor_{{ $campo }}" class="form-select campo-factor" style="max-width: 90px;"
+                                    data-campo="{{ $campo }}">
                                 @foreach (Salida::FACTORES as $f)
-                                    <option value="{{ $f }}" @selected(old("factor_{$campo}", 0.97) == $f)>{{ $f }}</option>
+                                    <option value="{{ $f }}" @selected(old("factor_{$campo}", $salida->{Salida::CAMPOS_FACTOR_MAP[$campo]} ?? 0.97) == $f)>{{ $f }}</option>
                                 @endforeach
                             </select>
                         </div>

@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Movimiento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
+use stdClass;
 
 class MovimientoController extends Controller
 {
-    /**
-     * Listado consolidado de turnos con todas las columnas de datos.
-     * Consulta la vista `view_consultamovimientos`.
-     */
     public function index(Request $request)
     {
         $filtros = [
@@ -18,26 +16,152 @@ class MovimientoController extends Controller
             'mes'  => $request->input('mes')  ?? now()->month,
         ];
 
-        $registros = Movimiento::query()
-            ->when($filtros['anio'] ?? null, fn ($q, $v) => $q->whereYear('fecha', $v))
-            ->when($filtros['mes'] ?? null, fn ($q, $v) => $q->whereMonth('fecha', $v))
-            ->orderByDesc('fecha')
-            ->orderBy('grupo')
-            ->orderBy('turno')
-            ->get();
+        $anio = $filtros['anio'];
+        $mes  = $filtros['mes'];
 
-        $anios = Movimiento::selectRaw('DISTINCT YEAR(fecha) as anio')
-            ->whereYear('fecha', '>', 2000)
-            ->orderByDesc('anio')
-            ->pluck('anio');
+        $whereYear  = fn($col) => fn($q) => $q->whereYear($col, $anio);
+        $whereMonth = fn($col) => fn($q) => $q->whereMonth($col, $mes);
 
-        return view('movimientos.index', compact('registros', 'filtros', 'anios'));
+        $registros = DB::table('movimientodetalle')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fecha'))
+            ->when($mes, $whereMonth('fecha'))
+            ->select('fecha', 'grupo', 'turno', DB::raw('MAX(status_id) as status_id'))
+            ->groupBy('fecha', 'grupo', 'turno')
+            ->get()
+            ->keyBy(fn($r) => "{$r->fecha}-{$r->grupo}-{$r->turno}");
+
+        if ($registros->isEmpty()) {
+            return view('movimientos.index', [
+                'registros' => new Collection(),
+                'filtros'   => $filtros,
+                'anios'     => $this->getAnios(),
+            ]);
+        }
+
+        $keys = $registros->keys();
+
+        $nacMap = DB::table('mpnacional')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fechanacional'))
+            ->when($mes, $whereMonth('fechanacional'))
+            ->selectRaw("CONCAT(fechanacional,'-',gruponacional,'-',turnonacional) as k,
+                SUM(pesobateria) as pesobateria,
+                GROUP_CONCAT(DISTINCT bateriatipo SEPARATOR ', ') as bateriatipo")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $impMap = DB::table('mpimport')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fechaimport'))
+            ->when($mes, $whereMonth('fechaimport'))
+            ->selectRaw("CONCAT(fechaimport,'-',grupoimport,'-',turnoimport) as k,
+                SUM(pesobateriaimport) as pesobateriaimport,
+                GROUP_CONCAT(DISTINCT bateriatipoimport SEPARATOR ', ') as bateriatipoimport,
+                SUM(metalicoimport) as metalicoimport,
+                SUM(pastaimport) as pastaimport,
+                SUM(placasimport) as placasimport")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $insMap = DB::table('insumos')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fecha'))
+            ->when($mes, $whereMonth('fecha'))
+            ->selectRaw("CONCAT(fecha,'-',grupoinsumo,'-',turnoinsumo) as k,
+                SUM(carbonatoSodio) as carbonatoSodio")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $salMap = DB::table('salidas')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fechasalida'))
+            ->when($mes, $whereMonth('fechasalida'))
+            ->selectRaw("CONCAT(fechasalida,'-',gruposalida,'-',turnosalida) as k,
+                SUM(metalico * COALESCE(calculablemeta, 0.97)) as salidas_metalico,
+                SUM(rejilla * COALESCE(calculablereji, 0.97)) as salidas_rejilla,
+                SUM(metalicofino * COALESCE(calculablemetafino, 0.97)) as salidas_metalicofino,
+                SUM(pastadesulfurada * COALESCE(calculablepasta, 0.97)) as salidas_pastadesulfurada,
+                SUM(pastasin * COALESCE(calculablepastasin, 0.97)) as salidas_pastasin,
+                SUM(polipropilenokg) as polipropilenokg,
+                SUM(abskg) as abskg,
+                SUM(separadorkg) as separadorkg,
+                SUM(descargas) as descargas")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $calMap = DB::table('analisiscalidad')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fecha'))
+            ->when($mes, $whereMonth('fecha'))
+            ->selectRaw("CONCAT(fecha,'-',grupocalidad,'-',turnocalidad) as k,
+                AVG(azufre) as azufre,
+                AVG(humedad) as humedad")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $consolidados = $registros->map(function ($r) use ($nacMap, $impMap, $insMap, $salMap, $calMap) {
+            $k = "{$r->fecha}-{$r->grupo}-{$r->turno}";
+            $nac = $nacMap->get($k);
+            $imp = $impMap->get($k);
+            $ins = $insMap->get($k);
+            $sal = $salMap->get($k);
+            $cal = $calMap->get($k);
+
+            $m = new stdClass();
+            $m->fecha    = $r->fecha;
+            $m->turno    = $r->turno;
+            $m->grupo    = $r->grupo;
+            $m->status_id = $r->status_id;
+
+            $m->pesobateria      = $nac->pesobateria ?? 0;
+            $m->bateriatipo       = $nac->bateriatipo ?? '';
+
+            $m->pesobateriaimport = $imp->pesobateriaimport ?? 0;
+            $m->bateriatipoimport = $imp->bateriatipoimport ?? '';
+            $m->metalicoimport    = $imp->metalicoimport ?? 0;
+            $m->pastaimport       = $imp->pastaimport ?? 0;
+            $m->placasimport      = $imp->placasimport ?? 0;
+
+            $m->carbonatoSodio    = $ins->carbonatoSodio ?? 0;
+
+            $m->salidas_metalico         = $sal->salidas_metalico ?? 0;
+            $m->salidas_rejilla          = $sal->salidas_rejilla ?? 0;
+            $m->salidas_metalicofino     = $sal->salidas_metalicofino ?? 0;
+            $m->salidas_pastadesulfurada = $sal->salidas_pastadesulfurada ?? 0;
+            $m->salidas_pastasin         = $sal->salidas_pastasin ?? 0;
+            $m->salidas_polipropilenokg  = $sal->polipropilenokg ?? 0;
+            $m->salidas_abskg            = $sal->abskg ?? 0;
+            $m->salidas_separadorkg      = $sal->separadorkg ?? 0;
+            $m->salidas_descargas        = $sal->descargas ?? 0;
+
+            $m->calidad_azufre  = $cal->azufre ?? 0;
+            $m->calidad_humedad = $cal->humedad ?? 0;
+
+            return $m;
+        })->sortByDesc('fecha')->sortBy('grupo')->sortBy('turno')->values();
+
+        $paginados = new \Illuminate\Pagination\LengthAwarePaginator(
+            $consolidados->forPage(1, 25),
+            $consolidados->count(),
+            25,
+            $request->query(),
+            ['path' => route('movimientos.index')]
+        );
+
+        return view('movimientos.index', [
+            'registros' => $paginados,
+            'all'       => $consolidados,
+            'filtros'   => $filtros,
+            'anios'     => $this->getAnios(),
+        ]);
     }
 
-    /**
-     * Detalle consolidado de un turno: consulta la vista filtrada por
-     * fecha + grupo + turno (rápido, ~1s, porque empuja el filtro a la vista).
-     */
     public function show(Request $request)
     {
         $data = $request->validate([
@@ -46,13 +170,102 @@ class MovimientoController extends Controller
             'turno' => ['required', 'string'],
         ]);
 
-        $m = Movimiento::where('fecha', $data['fecha'])
-            ->where('grupo', $data['grupo'])
-            ->where('turno', $data['turno'])
-            ->first();
+        $where = [
+            'fecha'  => $data['fecha'],
+            'grupo'  => $data['grupo'],
+            'turno'  => $data['turno'],
+        ];
 
-        abort_if(!$m, 404, 'No hay datos consolidados para ese turno.');
+        $m = new stdClass();
+        $m->fecha    = $data['fecha'];
+        $m->grupo    = $data['grupo'];
+        $m->turno    = $data['turno'];
+
+        $base = DB::table('movimientodetalle')
+            ->where($where)
+            ->where('is_deleted', 0)
+            ->first();
+        $m->status_id = $base->status_id ?? 1;
+
+        $nac = DB::table('mpnacional')
+            ->where('fechanacional', $data['fecha'])
+            ->where('gruponacional', $data['grupo'])
+            ->where('turnonacional', $data['turno'])
+            ->where('is_deleted', 0)
+            ->selectRaw("SUM(pesobateria) as pesobateria, GROUP_CONCAT(DISTINCT bateriatipo SEPARATOR ', ') as bateriatipo")
+            ->first();
+        $m->pesobateria = $nac->pesobateria ?? 0;
+        $m->bateriatipo = $nac->bateriatipo ?? '';
+
+        $imp = DB::table('mpimport')
+            ->where('fechaimport', $data['fecha'])
+            ->where('grupoimport', $data['grupo'])
+            ->where('turnoimport', $data['turno'])
+            ->where('is_deleted', 0)
+            ->selectRaw("SUM(pesobateriaimport) as pesobateriaimport, GROUP_CONCAT(DISTINCT bateriatipoimport SEPARATOR ', ') as bateriatipoimport, SUM(metalicoimport) as metalicoimport, SUM(pastaimport) as pastaimport, SUM(placasimport) as placasimport")
+            ->first();
+        $m->pesobateriaimport = $imp->pesobateriaimport ?? 0;
+        $m->bateriatipoimport = $imp->bateriatipoimport ?? '';
+        $m->metalicoimport    = $imp->metalicoimport ?? 0;
+        $m->pastaimport       = $imp->pastaimport ?? 0;
+        $m->placasimport      = $imp->placasimport ?? 0;
+
+        $ins = DB::table('insumos')
+            ->where('fecha', $data['fecha'])
+            ->where('grupoinsumo', $data['grupo'])
+            ->where('turnoinsumo', $data['turno'])
+            ->where('is_deleted', 0)
+            ->selectRaw('SUM(carbonatoSodio) as carbonatoSodio')
+            ->first();
+        $m->carbonatoSodio = $ins->carbonatoSodio ?? 0;
+
+        $sal = DB::table('salidas')
+            ->where('fechasalida', $data['fecha'])
+            ->where('gruposalida', $data['grupo'])
+            ->where('turnosalida', $data['turno'])
+            ->where('is_deleted', 0)
+            ->selectRaw('
+                SUM(metalico * COALESCE(calculablemeta, 0.97)) as salidas_metalico,
+                SUM(rejilla * COALESCE(calculablereji, 0.97)) as salidas_rejilla,
+                SUM(metalicofino * COALESCE(calculablemetafino, 0.97)) as salidas_metalicofino,
+                SUM(pastadesulfurada * COALESCE(calculablepasta, 0.97)) as salidas_pastadesulfurada,
+                SUM(pastasin * COALESCE(calculablepastasin, 0.97)) as salidas_pastasin,
+                SUM(polipropilenokg) as polipropilenokg,
+                SUM(abskg) as abskg,
+                SUM(separadorkg) as separadorkg,
+                SUM(descargas) as descargas
+            ')
+            ->first();
+        $m->salidas_metalico         = $sal->salidas_metalico ?? 0;
+        $m->salidas_rejilla          = $sal->salidas_rejilla ?? 0;
+        $m->salidas_metalicofino     = $sal->salidas_metalicofino ?? 0;
+        $m->salidas_pastadesulfurada = $sal->salidas_pastadesulfurada ?? 0;
+        $m->salidas_pastasin         = $sal->salidas_pastasin ?? 0;
+        $m->salidas_polipropilenokg  = $sal->polipropilenokg ?? 0;
+        $m->salidas_abskg            = $sal->abskg ?? 0;
+        $m->salidas_separadorkg      = $sal->separadorkg ?? 0;
+        $m->salidas_descargas        = $sal->descargas ?? 0;
+
+        $cal = DB::table('analisiscalidad')
+            ->where('fecha', $data['fecha'])
+            ->where('grupocalidad', $data['grupo'])
+            ->where('turnocalidad', $data['turno'])
+            ->where('is_deleted', 0)
+            ->selectRaw('AVG(azufre) as azufre, AVG(humedad) as humedad')
+            ->first();
+        $m->calidad_azufre  = $cal->azufre ?? 0;
+        $m->calidad_humedad = $cal->humedad ?? 0;
 
         return view('movimientos.show', ['m' => $m]);
+    }
+
+    private function getAnios()
+    {
+        return DB::table('movimientodetalle')
+            ->where('is_deleted', 0)
+            ->whereYear('fecha', '>', 2000)
+            ->selectRaw('DISTINCT YEAR(fecha) as anio')
+            ->orderByDesc('anio')
+            ->pluck('anio');
     }
 }

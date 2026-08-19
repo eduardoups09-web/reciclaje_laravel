@@ -16,6 +16,8 @@ class Salida extends Model
         'fechasalida', 'gruposalida', 'turnosalida',
         'metalico', 'rejilla', 'metalicofino', 'pastadesulfurada', 'pastasin',
         'polipropilenokg', 'abskg', 'separadorkg', 'descargas',
+        'polipropileno', 'abs', 'separador',
+        'calculablemeta', 'calculablereji', 'calculablemetafino', 'calculablepasta', 'calculablepastasin',
         'status_id', 'is_deleted', 'usernameproduccion',
     ];
 
@@ -37,6 +39,15 @@ class Salida extends Model
 
     /** Campos que llevan factor de rendimiento (0.95–0.99). */
     public const CAMPOS_CON_FACTOR = ['metalico', 'rejilla', 'metalicofino', 'pastadesulfurada', 'pastasin'];
+
+    /** Mapeo: campo del formulario => columna calculable en la BD. */
+    public const CAMPOS_FACTOR_MAP = [
+        'metalico'         => 'calculablemeta',
+        'rejilla'          => 'calculablereji',
+        'metalicofino'     => 'calculablemetafino',
+        'pastadesulfurada' => 'calculablepasta',
+        'pastasin'         => 'calculablepastasin',
+    ];
 
     /** Valores disponibles para los combobox de factor. */
     public const FACTORES = [0.95, 0.96, 0.97, 0.98, 0.99];

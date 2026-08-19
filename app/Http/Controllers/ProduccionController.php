@@ -30,7 +30,9 @@ class ProduccionController extends Controller
             ->orderByDesc('anio')
             ->pluck('anio');
 
-        return view('produccion.index', compact('registros', 'filtros', 'anios'));
+        $totales = $this->calcularTotales($filtros);
+
+        return view('produccion.index', compact('registros', 'filtros', 'anios', 'totales'));
     }
 
     /** Formulario de creación. */
@@ -49,7 +51,7 @@ class ProduccionController extends Controller
     public function store(Request $request)
     {
         $data = $this->validar($request);
-        $data = $this->aplicarFactores($request, $data);
+        $data = $this->guardarFactores($request, $data);
         $data['status_id']          = 1;
         $data['is_deleted']         = 0;
         $data['usernameproduccion'] = $this->username();
@@ -95,7 +97,7 @@ class ProduccionController extends Controller
     {
         abort_if($produccion->is_deleted, 404);
         $data = $this->validar($request, $produccion->id);
-        $data = $this->aplicarFactores($request, $data);
+        $data = $this->guardarFactores($request, $data);
         $produccion->update($data);
 
         if ($request->ajax()) {
@@ -141,19 +143,59 @@ class ProduccionController extends Controller
     }
 
     /**
-     * Aplica el factor de rendimiento a los 5 campos: campo * factor.
-     * El resultado redondeado se guarda en la BD.
+     * Guarda el factor de rendimiento en la columna calculable correspondiente.
+     * El valor crudo se mantiene intacto en su campo original.
+     * También asigna el nombre del producto en los campos varchar.
      */
-    private function aplicarFactores(Request $request, array $data): array
+    private function guardarFactores(Request $request, array $data): array
     {
-        foreach (Salida::CAMPOS_CON_FACTOR as $campo) {
-            $valor = $request->input($campo);
-            $factor = $request->input("factor_{$campo}", 0.97);
-            if (!is_null($valor) && $valor !== '' && $factor) {
-                $data[$campo] = round($valor * $factor);
-            }
+        foreach (Salida::CAMPOS_FACTOR_MAP as $campo => $columna) {
+            $factor = $request->input("factor_{$campo}");
+            $data[$columna] = $factor ?? 0.97;
         }
+
+        $nombres = [
+            'polipropilenokg' => ['polipropileno', 'Polipropileno'],
+            'abskg'           => ['abs', 'ABS'],
+            'separadorkg'     => ['separador', 'Separador'],
+        ];
+        foreach ($nombres as $campoKg => [$campoVarchar, $nombre]) {
+            $data[$campoVarchar] = (!empty($data[$campoKg]) && $data[$campoKg] > 0) ? $nombre : null;
+        }
+
         return $data;
+    }
+
+    /**
+     * Calcula los totales de la página actual: suma de valores crudos, factor promedio, y total calculado.
+     */
+    private function calcularTotales(array $filtros): array
+    {
+        $totales = [];
+        $granSuma = 0;
+        $granCalculado = 0;
+
+        foreach (Salida::CAMPOS_FACTOR_MAP as $campo => $columna) {
+            $resultado = Salida::activos()
+                ->filtrar($filtros)
+                ->selectRaw("SUM(COALESCE({$campo}, 0)) as suma, AVG(COALESCE({$columna}, 0.97)) as factor, SUM(COALESCE({$campo}, 0) * COALESCE({$columna}, 0.97)) as calculado")
+                ->first();
+
+            $suma = (float) ($resultado->suma ?? 0);
+            $factor = (float) ($resultado->factor ?? 0.97);
+            $calculado = round((float) ($resultado->calculado ?? 0));
+
+            $totales[$campo] = compact('suma', 'factor', 'calculado');
+            $granSuma += $suma;
+            $granCalculado += $calculado;
+        }
+
+        $totales['gran_total'] = [
+            'suma' => $granSuma,
+            'calculado' => $granCalculado,
+        ];
+
+        return $totales;
     }
 
     /** Username del usuario logueado (cae al name si no tiene username). */
@@ -162,4 +204,5 @@ class ProduccionController extends Controller
         $u = Auth::user();
         return $u->username ?: $u->name;
     }
+
 }

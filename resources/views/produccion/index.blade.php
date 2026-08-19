@@ -42,7 +42,7 @@
 <div class="card shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
+            <thead class="table-success">
                 <tr>
                     <th>Fecha</th><th>Grupo</th><th>Turno</th>
                     <th class="text-end">Metálico</th>
@@ -80,6 +80,19 @@
                 <tr><td colspan="10" class="text-center text-muted py-4">Sin registros.</td></tr>
             @endforelse
             </tbody>
+            @if(isset($totales) && count($totales))
+            <tfoot class="table-success fw-bold">
+                <tr>
+                    <td colspan="3">TOTALES</td>
+                    <td class="text-end">{{ number_format($totales['metalico']['calculado'] ?? 0) }}</td>
+                    <td class="text-end">{{ number_format($totales['rejilla']['calculado'] ?? 0) }}</td>
+                    <td class="text-end">{{ number_format($totales['metalicofino']['calculado'] ?? 0) }}</td>
+                    <td class="text-end">{{ number_format($totales['pastadesulfurada']['calculado'] ?? 0) }}</td>
+                    <td class="text-end">{{ number_format($totales['pastasin']['calculado'] ?? 0) }}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            @endif
         </table>
     </div>
 </div>

@@ -35,6 +35,7 @@ class OperacionController extends Controller
                     ->orderByDesc('fechasalida')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'produccion';
+                $totales = $this->calcularTotalesProduccion($filtros);
                 break;
 
             case 'calidad':
@@ -88,6 +89,41 @@ class OperacionController extends Controller
                 break;
         }
 
-        return view('operaciones.index', compact('tab', 'filtros', 'registros', 'recurso'));
+        $totales = $tab === 'produccion' ? ($totales ?? null) : null;
+
+        return view('operaciones.index', compact('tab', 'filtros', 'registros', 'recurso', 'totales'));
+    }
+
+    /**
+     * Calcula los totales de producción para los filtros actuales.
+     */
+    private function calcularTotalesProduccion(array $filtros): array
+    {
+        $totales = [];
+        $granCalculado = 0;
+
+        $query = Salida::activos()
+            ->when($filtros['fecha'], fn($q, $v) => $q->where('fechasalida', $v))
+            ->when($filtros['turno'], fn($q, $v) => $q->where('turnosalida', $v))
+            ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('gruposalida', $filtros['grupo']));
+
+        foreach (Salida::CAMPOS_FACTOR_MAP as $campo => $columna) {
+            $resultado = (clone $query)
+                ->selectRaw("SUM(COALESCE({$campo}, 0) * COALESCE({$columna}, 0.97)) as calculado")
+                ->first();
+
+            $calculado = round((float) ($resultado->calculado ?? 0));
+            $totales[$campo] = ['calculado' => $calculado];
+            $granCalculado += $calculado;
+        }
+
+        $camposSinFactor = ['polipropilenokg', 'abskg', 'separadorkg', 'descargas'];
+        foreach ($camposSinFactor as $campo) {
+            $totales[$campo] = (int) (clone $query)->sum($campo);
+        }
+
+        $totales['gran_total'] = ['calculado' => $granCalculado];
+
+        return $totales;
     }
 }
