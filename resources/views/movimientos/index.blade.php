@@ -55,7 +55,7 @@
         <table id="tabla-movimientos" class="table table-hover table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th class="text-center text-white fw-semibold" style="background-color:#28a745;" colspan="3">Principal</th>
+                    <th class="text-center text-white fw-semibold" style="background-color:#28a745;" colspan="4">Principal</th>
                     <th class="text-center text-white fw-semibold" style="background-color:#17a2b8;" colspan="2">Baterías Nacionales</th>
                     <th class="text-center text-white fw-semibold" style="background-color:#fd7e14;" colspan="2">Baterías Importadas</th>
                     <th class="text-center text-white fw-semibold" style="background-color:#dc3545;" colspan="3">MP Importada</th>
@@ -66,6 +66,7 @@
                 <tr>
                     <th style="background-color:#d4edda;">Fecha</th>
                     <th class="text-center" style="background-color:#d4edda;">Turno</th>
+                    <th class="text-center" style="background-color:#d4edda;">Grupo</th>
                     <th class="text-center" style="background-color:#d4edda;">Estado</th>
                     <th class="text-end" style="background-color:#cfe2f3;">Bat. Nac.</th>
                     <th style="background-color:#cfe2f3;">Tipo Bat. Nac.</th>
@@ -86,9 +87,10 @@
                     <th class="text-end" style="background-color:#d1ecf1;">Desc.</th>
                     <th class="text-end" style="background-color:#e2d5f1;">%Azufre</th>
                     <th class="text-end" style="background-color:#e2d5f1;">%Humedad</th>
+                    <th class="text-center" style="background-color:#d4edda;">Acciones</th>
                 </tr>
                 <tr class="table-warning fw-bold">
-                    <td colspan="3">TOTALES</td>
+                    <td colspan="4">TOTALES</td>
                     <td class="text-end">{{ $f($all->sum('pesobateria')) }}</td>
                     <td></td>
                     <td class="text-end">{{ $f($all->sum('pesobateriaimport')) }}</td>
@@ -108,6 +110,7 @@
                     <td class="text-end">{{ $f($all->sum('salidas_descargas')) }}</td>
                     <td class="text-end">{{ $promedioCalidad ? $f2($promedioCalidad->azufre) : '0.00' }}</td>
                     <td class="text-end">{{ $promedioCalidad ? $f2($promedioCalidad->humedad) : '0.00' }}</td>
+                    <td></td>
                 </tr>
             </thead>
             <tbody>
@@ -115,6 +118,7 @@
                 <tr>
                     <td class="fw-semibold">{{ $r->fecha }}</td>
                     <td class="text-center">{{ $r->turno }}</td>
+                    <td class="text-center"><span class="badge bg-secondary">G{{ $r->grupo }}</span></td>
                     <td class="text-center">
                         @php
                             $estiloStatus = match($r->status_id) {
@@ -146,9 +150,18 @@
                         {{ $f2($r->calidad_azufre) }}
                     </td>
                     <td class="text-end">{{ $f2($r->calidad_humedad) }}</td>
+                    <td class="text-center text-nowrap">
+                        <form method="post" action="{{ route('movimientos.destroy') }}" class="d-inline"
+                              onsubmit="return confirm('¿Eliminar todos los registros de esta fecha y turno?');">
+                            @csrf
+                            <input type="hidden" name="fecha" value="{{ $r->fecha }}">
+                            <input type="hidden" name="turno" value="{{ $r->turno }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Eliminar</button>
+                        </form>
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="22" class="text-center text-muted py-4">Sin registros. Seleccione año y mes.</td></tr>
+                <tr><td colspan="24" class="text-center text-muted py-4">Sin registros. Seleccione año y mes.</td></tr>
             @endforelse
             </tbody>
         </table>

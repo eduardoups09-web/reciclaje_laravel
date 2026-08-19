@@ -161,7 +161,17 @@ class MovimientoController extends Controller
             ->get()
             ->keyBy('k');
 
-        $consolidados = $registros->map(function ($r) use ($nacMap, $impMap, $insMap, $salMap, $calMap, $statusMap) {
+        $grupoMap = DB::table('movimientodetalle')
+            ->where('is_deleted', 0)
+            ->when($anio, $whereYear('fecha'))
+            ->when($mes, $whereMonth('fecha'))
+            ->selectRaw("CONCAT(DATE_FORMAT(fecha,'%Y-%m-%d'),'-',turno) as k,
+                GROUP_CONCAT(DISTINCT grupo ORDER BY grupo SEPARATOR ', ') as grupo")
+            ->groupBy('k')
+            ->get()
+            ->keyBy('k');
+
+        $consolidados = $registros->map(function ($r) use ($nacMap, $impMap, $insMap, $salMap, $calMap, $statusMap, $grupoMap) {
             $k = "{$r->fecha}-{$r->turno}";
             $nac = $nacMap->get($k);
             $imp = $impMap->get($k);
@@ -169,11 +179,12 @@ class MovimientoController extends Controller
             $sal = $salMap->get($k);
             $cal = $calMap->get($k);
             $status = $statusMap->get($k);
+            $grupo = $grupoMap->get($k);
 
             $m = new stdClass();
             $m->fecha    = $r->fecha;
             $m->turno    = $r->turno;
-            $m->grupo    = '-';
+            $m->grupo    = $grupo->grupo ?? '-';
             $m->status_id = $status->status_id ?? 1;
 
             $m->pesobateria      = $nac->pesobateria ?? 0;
@@ -318,5 +329,55 @@ class MovimientoController extends Controller
             ->selectRaw('DISTINCT YEAR(fecha) as anio')
             ->orderByDesc('anio')
             ->pluck('anio');
+    }
+
+    public function destroy(Request $request)
+    {
+        $data = $request->validate([
+            'fecha' => ['required', 'date'],
+            'turno' => ['required', 'string'],
+        ]);
+
+        $fecha = $data['fecha'];
+        $turno = $data['turno'];
+
+        DB::table('movimientodetalle')
+            ->where('fecha', $fecha)
+            ->where('turno', $turno)
+            ->where('is_deleted', 0)
+            ->update(['is_deleted' => 1]);
+
+        DB::table('mpnacional')
+            ->where('fechanacional', $fecha)
+            ->where('turnonacional', $turno)
+            ->where('is_deleted', 0)
+            ->update(['is_deleted' => 1]);
+
+        DB::table('mpimport')
+            ->where('fechaimport', $fecha)
+            ->where('turnoimport', $turno)
+            ->where('is_deleted', 0)
+            ->update(['is_deleted' => 1]);
+
+        DB::table('insumos')
+            ->where('fecha', $fecha)
+            ->where('turnoinsumo', $turno)
+            ->where('is_deleted', 0)
+            ->update(['is_deleted' => 1]);
+
+        DB::table('salidas')
+            ->where('fechasalida', $fecha)
+            ->where('turnosalida', $turno)
+            ->where('is_deleted', 0)
+            ->update(['is_deleted' => 1]);
+
+        DB::table('analisiscalidad')
+            ->where('fecha', $fecha)
+            ->where('turnocalidad', $turno)
+            ->where('is_deleted', 0)
+            ->update(['is_deleted' => 1]);
+
+        return redirect()->route('movimientos.index')
+            ->with('success', 'Registros eliminados correctamente.');
     }
 }

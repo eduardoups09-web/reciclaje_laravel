@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     // Movimientos consolidados (solo lectura, agrupado por fecha+grupo+turno)
     Route::get('/movimientos', [MovimientoController::class, 'index'])->name('movimientos.index');
     Route::get('/movimientos/detalle', [MovimientoController::class, 'show'])->name('movimientos.show');
+    Route::post('/movimientos/eliminar', [MovimientoController::class, 'destroy'])->name('movimientos.destroy');
 
     // Producción (salidas). El parámetro de modelo se llama {produccion}.
     Route::resource('produccion', ProduccionController::class)
