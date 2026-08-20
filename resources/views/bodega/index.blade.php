@@ -13,40 +13,12 @@
 <form method="get" action="{{ route('bodega.index') }}" class="card card-body shadow-sm mb-3">
     <div class="row g-2 align-items-end">
         <div class="col-md-3">
-            <label class="form-label small">Fecha de Inicio</label>
-            <input type="date" name="fecha" value="{{ $filtros['fecha'] ?? '' }}" class="form-control">
+            <label class="form-label small">Fecha Desde</label>
+            <input type="date" name="fecha_desde" value="{{ $filtros['fecha_desde'] ?? '' }}" class="form-control">
         </div>
         <div class="col-md-3">
-            <label class="form-label small">Tipo de batería</label>
-            <select name="tipo" class="form-select">
-                <option value="">Todos</option>
-                @foreach (Bodega::TIPOS_BATERIA as $t)
-                    <option value="{{ $t }}" @selected(($filtros['tipo'] ?? '') === $t)>{{ $t }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Grupo</label>
-            <select name="grupo" class="form-select">
-                <option value="">Todos</option>
-                @foreach (Bodega::GRUPOS as $g)
-                    <option value="{{ $g }}" @selected(($filtros['grupo'] ?? '') === $g)>Grupo {{ $g }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Turno</label>
-            <select name="turno" class="form-select">
-                <option value="">Todos</option>
-                @foreach (Bodega::TURNOS as $t)
-                    <option value="{{ $t }}" @selected(($filtros['turno'] ?? '') === $t)>{{ $t }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small">Buscar</label>
-            <input type="text" name="buscar" value="{{ $filtros['buscar'] ?? '' }}" class="form-control"
-                   placeholder="contenedor, destinatario…">
+            <label class="form-label small">Fecha Hasta</label>
+            <input type="date" name="fecha_hasta" value="{{ $filtros['fecha_hasta'] ?? '' }}" class="form-control">
         </div>
         <div class="col-md-2">
             <button class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
@@ -64,7 +36,7 @@
                 <tr>
                     <th>Fecha Inicio</th><th>Fecha Entrega</th><th>Despacho</th><th>Tipo</th><th>Contenedor</th>
                     <th class="text-end">Cantidad</th><th>Unidad</th>
-                    <th>Consec.</th><th>Destinatario</th><th>RUC Dest.</th>
+                    <th>Consec.</th><th>Destinatario</th><th>RUC Dest.</th><th>Llegada</th>
                     <th>Transportista</th><th>RUC Trans.</th><th>Placa</th>
                     <th>Observación</th><th>Motivo</th><th>Partida</th>
                     <th class="text-end">Acciones</th>
@@ -74,7 +46,7 @@
             @forelse ($registros as $r)
                 <tr>
                     <td>{{ $r->fechainicio }}</td>
-                    <td>{{ $r->fechaentrega }}</td>
+                    <td>{{ $r->fechaemision }}</td>
                     <td>{{ $r->despacho }}</td>
                     <td class="small">{{ $r->tipobateria }}</td>
                     <td>{{ $r->contenedor }}</td>
@@ -83,6 +55,7 @@
                     <td>{{ $r->consecutivo }}</td>
                     <td class="small">{{ $r->nombreDestinatario }}</td>
                     <td class="small">{{ $r->rucDestinatario }}</td>
+                    <td>{{ $r->llegada }}</td>
                     <td class="small text-muted">{{ $r->nombreTransportista }}</td>
                     <td class="small">{{ $r->transportistaRuc }}</td>
                     <td class="small">{{ $r->placaTransportista }}</td>
@@ -100,7 +73,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="17" class="text-center text-muted py-4">Sin registros.</td></tr>
+                <tr><td colspan="18" class="text-center text-muted py-4">Sin registros.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -161,7 +134,7 @@
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
             .then(res => res.text())
-            .then(html => { modalBody.innerHTML = html; })
+            .then(html => { modalBody.innerHTML = html; initConsecutivo(); })
             .catch(() => { modalBody.innerHTML = '<div class="alert alert-danger">Error al cargar el formulario.</div>'; });
     }
 
@@ -197,8 +170,7 @@
         .then(async res => {
             const data = await res.json();
             if (data.success) {
-                modal.hide();
-                location.reload();
+                mostrarExito(data.message);
             } else {
                 mostrarErrores(data.errors || {});
             }
@@ -227,6 +199,57 @@
             }
         }
     }
+
+    function mostrarExito(mensaje) {
+        modalBody.querySelectorAll('.alert-success').forEach(el => el.remove());
+        const div = document.createElement('div');
+        div.className = 'alert alert-success alert-dismissible fade show mt-2';
+        div.innerHTML = mensaje + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        modalBody.prepend(div);
+    }
+    function initConsecutivo() {
+        const form = document.getElementById('formBodega');
+        if (!form) return;
+
+        const fechaInput = form.querySelector('[name="fechainicio"]');
+        const despachoSelect = form.querySelector('[name="despacho"]');
+
+        let hiddenInput = form.querySelector('input[name="consecutivo"][type="hidden"]');
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'consecutivo';
+            form.appendChild(hiddenInput);
+        }
+
+        function obtenerConsecutivo() {
+            const fecha = fechaInput.value;
+            const despacho = despachoSelect.value;
+            if (!fecha || !despacho) return;
+
+            fetch(`/bodega/consecutivo?fecha=${fecha}&despacho=${despacho}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(data => {
+                hiddenInput.value = data.consecutivo;
+            });
+        }
+
+        fechaInput.addEventListener('change', obtenerConsecutivo);
+        despachoSelect.addEventListener('change', obtenerConsecutivo);
+
+        const contenedorInput = form.querySelector('[name="contenedor"]');
+        if (contenedorInput) {
+            contenedorInput.addEventListener('focus', () => {
+                if (!contenedorInput.value) {
+                    contenedorInput.value = 'LOCAL';
+                }
+            });
+        }
+    }
+
 })();
 </script>
 @endpush

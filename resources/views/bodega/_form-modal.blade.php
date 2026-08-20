@@ -13,12 +13,16 @@
         </div>
         <div class="col-md-4">
             <label class="form-label">Fecha de entrega</label>
-            <input type="date" name="fechaentrega" class="form-control"
-                   value="{{ old('fechaentrega', $bodega->fechaentrega) }}">
+            <input type="date" name="fechaemision" class="form-control"
+                   value="{{ old('fechaemision', $bodega->fechaemision) }}">
         </div>
         <div class="col-md-4">
-            <label class="form-label">N.º despacho</label>
-            <select name="despacho" class="form-select">
+            <label class="form-label">Llegada</label>
+            <input type="text" name="llegada" class="form-control" value="{{ old('llegada', $bodega->llegada) }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">N.º despacho <span class="text-danger">*</span></label>
+            <select name="despacho" class="form-select" required>
                 <option value="">Seleccionar…</option>
                 @for ($i = 1; $i <= 6; $i++)
                     <option value="{{ $i }}" @selected(old('despacho', $bodega->despacho) == $i)>{{ $i }}</option>
@@ -27,8 +31,8 @@
         </div>
 
         <div class="col-md-4">
-            <label class="form-label">Tipo de batería</label>
-            <select name="tipobateria" class="form-select">
+            <label class="form-label">Tipo de batería <span class="text-danger">*</span></label>
+            <select name="tipobateria" class="form-select" required>
                 <option value="">Seleccionar…</option>
                 @foreach (Bodega::TIPOS_BATERIA as $t)
                     <option value="{{ $t }}" @selected(old('tipobateria', $bodega->tipobateria) === $t)>{{ $t }}</option>
@@ -36,8 +40,8 @@
             </select>
         </div>
         <div class="col-md-4">
-            <label class="form-label">Contenedor</label>
-            <input type="text" name="contenedor" class="form-control" value="{{ old('contenedor', $bodega->contenedor) }}">
+            <label class="form-label">Contenedor <span class="text-danger">*</span></label>
+            <input type="text" name="contenedor" class="form-control" required value="{{ old('contenedor', $bodega->contenedor) }}">
         </div>
         <div class="col-md-4">
             <label class="form-label">Cantidad <span class="text-danger">*</span></label>
@@ -52,10 +56,6 @@
                     <option value="{{ $u }}" @selected(old('unidad', $bodega->unidad) === $u)>{{ $u }}</option>
                 @endforeach
             </select>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Consecutivo</label>
-            <input type="number" name="consecutivo" class="form-control" value="{{ old('consecutivo', $bodega->consecutivo) }}">
         </div>
         <div class="col-md-6">
             <label class="form-label">Destinatario</label>

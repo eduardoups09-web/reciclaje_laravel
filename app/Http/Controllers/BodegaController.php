@@ -11,7 +11,13 @@ class BodegaController extends Controller
 {
     public function index(Request $request)
     {
-        $filtros = $request->only('fecha', 'tipo', 'buscar', 'grupo', 'turno');
+        $filtros = $request->only('fecha_desde', 'fecha_hasta');
+
+        if (empty($filtros['fecha_desde']) && empty($filtros['fecha_hasta'])) {
+            $hoy = now()->toDateString();
+            $filtros['fecha_desde'] = $hoy;
+            $filtros['fecha_hasta'] = $hoy;
+        }
 
         $registros = Bodega::activos()
             ->filtrar($filtros)
@@ -25,6 +31,30 @@ class BodegaController extends Controller
         $motivos = DB::table('motivo')->where('is_deleted', 0)->pluck('motivos');
 
         return view('bodega.index', compact('registros', 'filtros', 'unidades', 'transportistas', 'motivos'));
+    }
+
+    public function consecutivo(Request $request)
+    {
+        $fecha    = $request->query('fecha');
+        $despacho = $request->query('despacho');
+
+        if (!$fecha || !$despacho) {
+            return response()->json(['consecutivo' => 1]);
+        }
+
+        $existe = Bodega::where('fechainicio', $fecha)
+            ->where('despacho', $despacho)
+            ->where('is_deleted', 0)
+            ->first();
+
+        if ($existe) {
+            return response()->json(['consecutivo' => $existe->consecutivo]);
+        }
+
+        $max = Bodega::where('is_deleted', 0)
+            ->max('consecutivo');
+
+        return response()->json(['consecutivo' => ($max ?? 0) + 1]);
     }
 
     public function create()
@@ -97,14 +127,12 @@ class BodegaController extends Controller
     {
         return $request->validate([
             'fechainicio'         => ['required', 'date'],
-            'grupo'               => ['required', 'in:' . implode(',', Bodega::GRUPOS)],
-            'turno'               => ['required', 'in:' . implode(',', Bodega::TURNOS)],
-            'tipobateria'         => ['nullable', 'string', 'max:50'],
-            'contenedor'          => ['nullable', 'string', 'max:50'],
+            'tipobateria'         => ['required', 'string', 'max:50'],
+            'contenedor'          => ['required', 'string', 'max:50'],
             'cantidad'            => ['required', 'numeric'],
             'unidad'              => ['nullable', 'string', 'max:100'],
             'consecutivo'         => ['nullable', 'integer'],
-            'despacho'            => ['nullable', 'string', 'max:50'],
+            'despacho'            => ['required', 'string', 'max:50'],
             'nombreDestinatario'  => ['nullable', 'string', 'max:100'],
             'rucDestinatario'     => ['nullable', 'string', 'max:255'],
             'nombreTransportista' => ['nullable', 'string', 'max:255'],
@@ -113,7 +141,8 @@ class BodegaController extends Controller
             'observacion'         => ['nullable', 'string', 'max:100'],
             'motivo'              => ['nullable', 'string', 'max:100'],
             'partida'             => ['nullable', 'string', 'max:100'],
-            'fechaentrega'        => ['nullable', 'date'],
+            'fechaemision'        => ['nullable', 'date'],
+            'llegada'             => ['nullable', 'string', 'max:100'],
         ], [], [
             'fechainicio' => 'fecha',
             'cantidad'    => 'cantidad',

@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
         ->except(['show']);
 
     // Inventario / Bodega
+    Route::get('/bodega/consecutivo', [BodegaController::class, 'consecutivo'])->name('bodega.consecutivo');
     Route::resource('bodega', BodegaController::class)
         ->parameters(['bodega' => 'bodega'])
         ->except(['show']);

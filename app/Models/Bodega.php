@@ -12,19 +12,17 @@ class Bodega extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'fechainicio', 'grupo', 'turno', 'tipobateria', 'contenedor', 'cantidad', 'unidad',
+        'fechainicio', 'tipobateria', 'contenedor', 'cantidad', 'unidad',
         'consecutivo', 'despacho',
         'nombreDestinatario', 'rucDestinatario',
         'nombreTransportista', 'transportistaRuc', 'placaTransportista',
-        'observacion', 'motivo', 'partida', 'fechaentrega',
+        'observacion', 'motivo', 'partida', 'fechaemision', 'llegada',
         'is_deleted', 'usernameBodega',
     ];
 
     /** Sugerencias para los campos de texto (datalist). */
     public const TIPOS_BATERIA = ['Bateria Chatarra Automotriz', 'Bateria UPS', 'Otro'];
     public const UNIDADES      = ['Kilogramos', 'Unidades'];
-    public const GRUPOS        = ['1', '2'];
-    public const TURNOS        = ['Diurno', 'Nocturno'];
 
     public function scopeActivos($query)
     {
@@ -33,26 +31,11 @@ class Bodega extends Model
 
     public function scopeFiltrar($query, array $filtros)
     {
-        if (!empty($filtros['fecha'])) {
-            $query->where('fechainicio', $filtros['fecha']);
+        if (!empty($filtros['fecha_desde'])) {
+            $query->where('fechainicio', '>=', $filtros['fecha_desde']);
         }
-        if (!empty($filtros['tipo'])) {
-            $query->where('tipobateria', $filtros['tipo']);
-        }
-        if (!empty($filtros['grupo'])) {
-            $query->where('grupo', $filtros['grupo']);
-        }
-        if (!empty($filtros['turno'])) {
-            $query->where('turno', $filtros['turno']);
-        }
-        if (!empty($filtros['buscar'])) {
-            $b = $filtros['buscar'];
-            $query->where(function ($q) use ($b) {
-                $q->where('contenedor', 'like', "%$b%")
-                  ->orWhere('nombreDestinatario', 'like', "%$b%")
-                  ->orWhere('nombreTransportista', 'like', "%$b%")
-                  ->orWhere('consecutivo', 'like', "%$b%");
-            });
+        if (!empty($filtros['fecha_hasta'])) {
+            $query->where('fechainicio', '<=', $filtros['fecha_hasta']);
         }
         return $query;
     }

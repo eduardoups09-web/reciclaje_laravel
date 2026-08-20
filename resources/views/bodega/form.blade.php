@@ -26,38 +26,24 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Fecha de entrega</label>
-                <input type="date" name="fechaentrega" class="form-control"
-                       value="{{ old('fechaentrega', $bodega->fechaentrega) }}">
+                <input type="date" name="fechaemision" class="form-control"
+                       value="{{ old('fechaemision', $bodega->fechaemision) }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Grupo <span class="text-danger">*</span></label>
-                <select name="grupo" class="form-select" required>
-                    <option value="">Seleccionar…</option>
-                    @foreach (Bodega::GRUPOS as $g)
-                        <option value="{{ $g }}" @selected(old('grupo', $bodega->grupo) === $g)>Grupo {{ $g }}</option>
-                    @endforeach
-                </select>
+                <label class="form-label">Llegada</label>
+                <input type="text" name="llegada" class="form-control" value="{{ old('llegada', $bodega->llegada) }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Turno <span class="text-danger">*</span></label>
-                <select name="turno" class="form-select" required>
-                    <option value="">Seleccionar…</option>
-                    @foreach (Bodega::TURNOS as $t)
-                        <option value="{{ $t }}" @selected(old('turno', $bodega->turno) === $t)>{{ $t }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Tipo de batería</label>
-                <input list="tiposBateria" name="tipobateria" class="form-control"
+                <label class="form-label">Tipo de batería <span class="text-danger">*</span></label>
+                <input list="tiposBateria" name="tipobateria" class="form-control" required
                        value="{{ old('tipobateria', $bodega->tipobateria) }}">
                 <datalist id="tiposBateria">
                     @foreach (Bodega::TIPOS_BATERIA as $t)<option value="{{ $t }}">@endforeach
                 </datalist>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Contenedor</label>
-                <input type="text" name="contenedor" class="form-control" value="{{ old('contenedor', $bodega->contenedor) }}">
+                <label class="form-label">Contenedor <span class="text-danger">*</span></label>
+                <input type="text" name="contenedor" class="form-control" required value="{{ old('contenedor', $bodega->contenedor) }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Cantidad <span class="text-danger">*</span></label>
@@ -74,12 +60,13 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Consecutivo</label>
-                <input type="number" name="consecutivo" class="form-control" value="{{ old('consecutivo', $bodega->consecutivo) }}">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">N.º despacho</label>
-                <input type="text" name="despacho" class="form-control" value="{{ old('despacho', $bodega->despacho) }}">
+                <label class="form-label">N.º despacho <span class="text-danger">*</span></label>
+                <select name="despacho" class="form-select" required>
+                    <option value="">Seleccionar…</option>
+                    @for ($i = 1; $i <= 6; $i++)
+                        <option value="{{ $i }}" @selected(old('despacho', $bodega->despacho) == $i)>{{ $i }}</option>
+                    @endfor
+                </select>
             </div>
         </div>
     </div>
@@ -136,3 +123,41 @@
     <a href="{{ route('bodega.index') }}" class="btn btn-light btn-lg">Cancelar</a>
 </form>
 @endsection
+
+@push('scripts')
+<script>
+(function() {
+    const form = document.querySelector('form[method="post"]');
+    if (!form) return;
+
+    const fechaInput = form.querySelector('[name="fechainicio"]');
+    const despachoInput = form.querySelector('[name="despacho"]');
+
+    let hiddenInput = form.querySelector('input[name="consecutivo"][type="hidden"]');
+    if (!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'consecutivo';
+        form.appendChild(hiddenInput);
+    }
+
+    function obtenerConsecutivo() {
+        const fecha = fechaInput.value;
+        const despacho = despachoInput.value;
+        if (!fecha || !despacho) return;
+
+        fetch(`/bodega/consecutivo?fecha=${fecha}&despacho=${despacho}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+        .then(r => r.json())
+        .then(data => {
+            hiddenInput.value = data.consecutivo;
+        });
+    }
+
+    fechaInput.addEventListener('change', obtenerConsecutivo);
+    despachoInput.addEventListener('change', obtenerConsecutivo);
+})();
+</script>
+@endpush
