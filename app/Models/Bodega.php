@@ -16,7 +16,7 @@ class Bodega extends Model
         'consecutivo', 'despacho',
         'nombreDestinatario', 'rucDestinatario',
         'nombreTransportista', 'transportistaRuc', 'placaTransportista',
-        'observacion', 'motivo', 'partida',
+        'observacion', 'motivo', 'partida', 'fechaentrega',
         'is_deleted', 'usernameBodega',
     ];
 

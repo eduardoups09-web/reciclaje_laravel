@@ -20,9 +20,14 @@
         <div class="card-header bg-light fw-semibold">Datos del movimiento</div>
         <div class="card-body row g-3">
             <div class="col-md-3">
-                <label class="form-label">Fecha <span class="text-danger">*</span></label>
+                <label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
                 <input type="date" name="fechainicio" class="form-control" required
                        value="{{ old('fechainicio', $bodega->fechainicio ?? now()->toDateString()) }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fecha de entrega</label>
+                <input type="date" name="fechaentrega" class="form-control"
+                       value="{{ old('fechaentrega', $bodega->fechaentrega) }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Grupo <span class="text-danger">*</span></label>
@@ -61,10 +66,12 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Unidad</label>
-                <input list="unidades" name="unidad" class="form-control" value="{{ old('unidad', $bodega->unidad) }}">
-                <datalist id="unidades">
-                    @foreach (Bodega::UNIDADES as $u)<option value="{{ $u }}">@endforeach
-                </datalist>
+                <select name="unidad" class="form-select">
+                    <option value="">Seleccionar…</option>
+                    @foreach ($unidades as $u)
+                        <option value="{{ $u }}" @selected(old('unidad', $bodega->unidad) === $u)>{{ $u }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Consecutivo</label>
@@ -90,7 +97,12 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Transportista</label>
-                <input type="text" name="nombreTransportista" class="form-control" value="{{ old('nombreTransportista', $bodega->nombreTransportista) }}">
+                <select name="nombreTransportista" class="form-select">
+                    <option value="">Seleccionar…</option>
+                    @foreach ($transportistas as $t)
+                        <option value="{{ $t }}" @selected(old('nombreTransportista', $bodega->nombreTransportista) === $t)>{{ $t }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="col-md-4">
                 <label class="form-label">RUC transportista</label>
@@ -103,6 +115,19 @@
             <div class="col-12">
                 <label class="form-label">Observación</label>
                 <input type="text" name="observacion" class="form-control" value="{{ old('observacion', $bodega->observacion) }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Motivo</label>
+                <select name="motivo" class="form-select">
+                    <option value="">Seleccionar…</option>
+                    @foreach ($motivos as $m)
+                        <option value="{{ $m }}" @selected(old('motivo', $bodega->motivo) === $m)>{{ $m }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Partida</label>
+                <input type="text" name="partida" class="form-control" value="{{ old('partida', $bodega->partida) }}">
             </div>
         </div>
     </div>

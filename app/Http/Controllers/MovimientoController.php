@@ -14,54 +14,87 @@ class MovimientoController extends Controller
         $filtros = [
             'anio' => $request->input('anio') ?? now()->year,
             'mes'  => $request->input('mes')  ?? now()->month,
+            'tipo_bateria' => $request->input('tipo_bateria') ?? '',
         ];
 
         $anio = $filtros['anio'];
         $mes  = $filtros['mes'];
+        $tipoBateria = $filtros['tipo_bateria'];
 
         $whereYear  = fn($col) => fn($q) => $q->whereYear($col, $anio);
         $whereMonth = fn($col) => fn($q) => $q->whereMonth($col, $mes);
 
-        $fechasUnicas = DB::table('movimientodetalle')
-            ->where('is_deleted', 0)
-            ->when($anio, $whereYear('fecha'))
-            ->when($mes, $whereMonth('fecha'))
-            ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turno")
-            ->unionAll(
-                DB::table('mpnacional')
-                    ->where('is_deleted', 0)
-                    ->when($anio, $whereYear('fechanacional'))
-                    ->when($mes, $whereMonth('fechanacional'))
-                    ->selectRaw("DATE_FORMAT(fechanacional,'%Y-%m-%d') as fecha, turnonacional as turno")
-            )
-            ->unionAll(
-                DB::table('mpimport')
-                    ->where('is_deleted', 0)
-                    ->when($anio, $whereYear('fechaimport'))
-                    ->when($mes, $whereMonth('fechaimport'))
-                    ->selectRaw("DATE_FORMAT(fechaimport,'%Y-%m-%d') as fecha, turnoimport as turno")
-            )
-            ->unionAll(
-                DB::table('insumos')
-                    ->where('is_deleted', 0)
-                    ->when($anio, $whereYear('fecha'))
-                    ->when($mes, $whereMonth('fecha'))
-                    ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turnoinsumo as turno")
-            )
-            ->unionAll(
-                DB::table('salidas')
-                    ->where('is_deleted', 0)
-                    ->when($anio, $whereYear('fechasalida'))
-                    ->when($mes, $whereMonth('fechasalida'))
-                    ->selectRaw("DATE_FORMAT(fechasalida,'%Y-%m-%d') as fecha, turnosalida as turno")
-            )
-            ->unionAll(
-                DB::table('analisiscalidad')
-                    ->where('is_deleted', 0)
-                    ->when($anio, $whereYear('fecha'))
-                    ->when($mes, $whereMonth('fecha'))
-                    ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turnocalidad as turno")
-            )
+        // Filtros para mpnacional
+        $filterNac = fn($q) => match($tipoBateria) {
+            'nac_auto' => $q->where('bateriatipo', 'Automotriz'),
+            'nac_ups'  => $q->where('bateriatipo', 'UPS'),
+            default    => $q,
+        };
+
+        // Filtros para mpimport
+        $filterImp = fn($q) => match($tipoBateria) {
+            'imp_auto' => $q->where('bateriatipoimport', 'Automotriz'),
+            'imp_ups'  => $q->where('bateriatipoimport', 'UPS'),
+            'met_imp'  => $q->where('metalicoimport', '>', 0),
+            'pasta'    => $q->where('pastaimport', '>', 0),
+            'placas'   => $q->where('placasimport', '>', 0),
+            default    => $q,
+        };
+
+        // Construir UNION condicional según filtro de batería
+        if (in_array($tipoBateria, ['nac_auto', 'nac_ups'])) {
+            $unionQuery = DB::table('mpnacional')
+                ->where('is_deleted', 0)
+                ->when($anio, $whereYear('fechanacional'))
+                ->when($mes, $whereMonth('fechanacional'))
+                ->when($tipoBateria, $filterNac)
+                ->selectRaw("DATE_FORMAT(fechanacional,'%Y-%m-%d') as fecha, turnonacional as turno");
+        } elseif (in_array($tipoBateria, ['imp_auto', 'imp_ups', 'met_imp', 'pasta', 'placas'])) {
+            $unionQuery = DB::table('mpimport')
+                ->where('is_deleted', 0)
+                ->when($anio, $whereYear('fechaimport'))
+                ->when($mes, $whereMonth('fechaimport'))
+                ->when($tipoBateria, $filterImp)
+                ->selectRaw("DATE_FORMAT(fechaimport,'%Y-%m-%d') as fecha, turnoimport as turno");
+        } else {
+            $unionQuery = DB::table('movimientodetalle')
+                ->where('is_deleted', 0)
+                ->when($anio, $whereYear('fecha'))
+                ->when($mes, $whereMonth('fecha'))
+                ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turno")
+                ->unionAll(
+                    DB::table('mpnacional')->where('is_deleted', 0)
+                        ->when($anio, $whereYear('fechanacional'))
+                        ->when($mes, $whereMonth('fechanacional'))
+                        ->selectRaw("DATE_FORMAT(fechanacional,'%Y-%m-%d') as fecha, turnonacional as turno")
+                )
+                ->unionAll(
+                    DB::table('mpimport')->where('is_deleted', 0)
+                        ->when($anio, $whereYear('fechaimport'))
+                        ->when($mes, $whereMonth('fechaimport'))
+                        ->selectRaw("DATE_FORMAT(fechaimport,'%Y-%m-%d') as fecha, turnoimport as turno")
+                )
+                ->unionAll(
+                    DB::table('insumos')->where('is_deleted', 0)
+                        ->when($anio, $whereYear('fecha'))
+                        ->when($mes, $whereMonth('fecha'))
+                        ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turnoinsumo as turno")
+                )
+                ->unionAll(
+                    DB::table('salidas')->where('is_deleted', 0)
+                        ->when($anio, $whereYear('fechasalida'))
+                        ->when($mes, $whereMonth('fechasalida'))
+                        ->selectRaw("DATE_FORMAT(fechasalida,'%Y-%m-%d') as fecha, turnosalida as turno")
+                )
+                ->unionAll(
+                    DB::table('analisiscalidad')->where('is_deleted', 0)
+                        ->when($anio, $whereYear('fecha'))
+                        ->when($mes, $whereMonth('fecha'))
+                        ->selectRaw("DATE_FORMAT(fecha,'%Y-%m-%d') as fecha, turnocalidad as turno")
+                );
+        }
+
+        $fechasUnicas = $unionQuery
             ->distinct()
             ->orderBy('fecha')
             ->orderBy('turno')
@@ -84,6 +117,7 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fechanacional'))
             ->when($mes, $whereMonth('fechanacional'))
+            ->when(in_array($tipoBateria, ['nac_auto', 'nac_ups']), $filterNac)
             ->selectRaw("CONCAT(DATE_FORMAT(fechanacional,'%Y-%m-%d'),'-',turnonacional) as k,
                 SUM(pesobateria) as pesobateria,
                 GROUP_CONCAT(DISTINCT bateriatipo SEPARATOR ', ') as bateriatipo")
@@ -95,6 +129,7 @@ class MovimientoController extends Controller
             ->where('is_deleted', 0)
             ->when($anio, $whereYear('fechaimport'))
             ->when($mes, $whereMonth('fechaimport'))
+            ->when(in_array($tipoBateria, ['imp_auto', 'imp_ups', 'met_imp', 'pasta', 'placas']), $filterImp)
             ->selectRaw("CONCAT(DATE_FORMAT(fechaimport,'%Y-%m-%d'),'-',turnoimport) as k,
                 SUM(pesobateriaimport) as pesobateriaimport,
                 GROUP_CONCAT(DISTINCT bateriatipoimport SEPARATOR ', ') as bateriatipoimport,

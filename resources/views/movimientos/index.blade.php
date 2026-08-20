@@ -13,7 +13,7 @@
     $meses = [1=>'Enero',2=>'Febrero',3=>'Marzo',4=>'Abril',5=>'Mayo',6=>'Junio',
               7=>'Julio',8=>'Agosto',9=>'Septiembre',10=>'Octubre',11=>'Noviembre',12=>'Diciembre'];
     $estados = [1 => 'Abierto', 2 => 'Cerrado', 4 => 'Aprobado'];
-    $all = $all ?? $registros->getCollection();
+    $all = $all ?? $registros;
     $f = fn($v) => number_format($v ?? 0, 0, ',', '.');
     $f2 = fn($v) => number_format($v ?? 0, 2, ',', '.');
 @endphp
@@ -38,6 +38,23 @@
                 @foreach ($meses as $num => $nombre)
                     <option value="{{ $num }}" @selected(($filtros['mes'] ?? '') == $num)>{{ $nombre }}</option>
                 @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Tipo de Batería</label>
+            <select name="tipo_bateria" class="form-select">
+                <option value="">Todas</option>
+                <optgroup label="Baterías Nacionales">
+                    <option value="nac_auto" @selected(($filtros['tipo_bateria'] ?? '') == 'nac_auto')>Automotriz Nacional</option>
+                    <option value="nac_ups" @selected(($filtros['tipo_bateria'] ?? '') == 'nac_ups')>UPS Nacional</option>
+                </optgroup>
+                <optgroup label="Baterías Importadas">
+                    <option value="imp_auto" @selected(($filtros['tipo_bateria'] ?? '') == 'imp_auto')>Automotriz Importada</option>
+                    <option value="imp_ups" @selected(($filtros['tipo_bateria'] ?? '') == 'imp_ups')>UPS Importada</option>
+                    <option value="met_imp" @selected(($filtros['tipo_bateria'] ?? '') == 'met_imp')>Met. Imp.</option>
+                    <option value="pasta" @selected(($filtros['tipo_bateria'] ?? '') == 'pasta')>Pasta</option>
+                    <option value="placas" @selected(($filtros['tipo_bateria'] ?? '') == 'placas')>Placas</option>
+                </optgroup>
             </select>
         </div>
         <div class="col-md-3">
