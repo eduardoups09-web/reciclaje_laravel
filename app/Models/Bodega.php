@@ -31,12 +31,21 @@ class Bodega extends Model
 
     public function scopeFiltrar($query, array $filtros)
     {
+        if (!empty($filtros['consecutivo'])) {
+            return $query->where('consecutivo', $filtros['consecutivo']);
+        }
+
+        if (!empty($filtros['peso'])) {
+            return $query->where('cantidad', $filtros['peso']);
+        }
+
         if (!empty($filtros['fecha_desde'])) {
             $query->where('fechainicio', '>=', $filtros['fecha_desde']);
         }
         if (!empty($filtros['fecha_hasta'])) {
             $query->where('fechainicio', '<=', $filtros['fecha_hasta']);
         }
+
         return $query;
     }
 }

@@ -6,31 +6,61 @@ use App\Models\Bodega;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BodegaController extends Controller
 {
     public function index(Request $request)
     {
-        $filtros = $request->only('fecha_desde', 'fecha_hasta');
+        $filtros = $request->only('fecha_desde', 'fecha_hasta', 'mes', 'anio', 'peso', 'consecutivo');
 
-        if (empty($filtros['fecha_desde']) && empty($filtros['fecha_hasta'])) {
-            $hoy = now()->toDateString();
-            $filtros['fecha_desde'] = $hoy;
-            $filtros['fecha_hasta'] = $hoy;
+        if (empty($filtros['consecutivo']) && empty($filtros['peso'])) {
+            if (!empty($filtros['mes']) && !empty($filtros['anio'])) {
+                $filtros['fecha_desde'] = \Carbon\Carbon::createFromDate($filtros['anio'], $filtros['mes'], 1)->startOfMonth()->toDateString();
+                $filtros['fecha_hasta'] = \Carbon\Carbon::createFromDate($filtros['anio'], $filtros['mes'], 1)->endOfMonth()->toDateString();
+            } elseif (empty($filtros['mes']) && empty($filtros['anio'])) {
+                $filtros['mes'] = (int) now()->format('m');
+                $filtros['anio'] = (int) now()->format('Y');
+                $filtros['fecha_desde'] = now()->startOfMonth()->toDateString();
+                $filtros['fecha_hasta'] = now()->endOfMonth()->toDateString();
+            }
         }
-
-        $registros = Bodega::activos()
-            ->filtrar($filtros)
-            ->orderByDesc('fechainicio')
-            ->orderByDesc('id')
-            ->paginate(25)
-            ->withQueryString();
 
         $unidades = DB::table('unidad')->where('is_deleted', 0)->pluck('unidades');
         $transportistas = DB::table('transportista')->where('is_deleted', 0)->pluck('transportistas');
         $motivos = DB::table('motivo')->where('is_deleted', 0)->pluck('motivos');
 
-        return view('bodega.index', compact('registros', 'filtros', 'unidades', 'transportistas', 'motivos'));
+        $despachosQuery = Bodega::select('fechainicio', 'despacho', 'consecutivo')
+            ->selectRaw('SUM(cantidad) as total_cantidad')
+            ->where('is_deleted', 0);
+
+        if (!empty($filtros['consecutivo'])) {
+            $despachosQuery->where('consecutivo', $filtros['consecutivo']);
+        } elseif (!empty($filtros['peso'])) {
+            $despachosQuery->where('cantidad', $filtros['peso']);
+        } else {
+            $despachosQuery->where('fechainicio', '>=', $filtros['fecha_desde'])
+                ->where('fechainicio', '<=', $filtros['fecha_hasta']);
+        }
+
+        $despachos = $despachosQuery->groupBy('fechainicio', 'despacho', 'consecutivo')
+            ->orderBy('fechainicio')
+            ->orderBy('despacho')
+            ->get();
+
+        $registros = Bodega::activos()
+            ->filtrar($filtros)
+            ->orderByDesc('fechainicio');
+
+        if (!empty($filtros['consecutivo'])) {
+            $registros->orderByDesc('consecutivo');
+        }
+
+        $registros = $registros->orderByDesc('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('bodega.index', compact('registros', 'filtros', 'unidades', 'transportistas', 'motivos', 'despachos'));
     }
 
     public function consecutivo(Request $request)
@@ -55,6 +85,54 @@ class BodegaController extends Controller
             ->max('consecutivo');
 
         return response()->json(['consecutivo' => ($max ?? 0) + 1]);
+    }
+
+    public function pdf(Request $request)
+    {
+        $fecha      = $request->query('fecha');
+        $despacho   = $request->query('despacho');
+        $consecutivo = $request->query('consecutivo');
+
+        $registros = Bodega::where('fechainicio', $fecha)
+            ->where('despacho', $despacho)
+            ->where('consecutivo', $consecutivo)
+            ->where('is_deleted', 0)
+            ->get();
+
+        if ($registros->isEmpty()) {
+            abort(404, 'No se encontraron registros para esta orden de despacho.');
+        }
+
+        $total = $registros->sum('cantidad');
+
+        $pdf = Pdf::loadView('bodega.pdf', compact('registros', 'total', 'fecha', 'despacho', 'consecutivo'))
+            ->setPaper('letter');
+
+        return $pdf->stream("orden_despacho_{$consecutivo}_{$fecha}.pdf");
+    }
+
+    public function pdfFormato($id)
+    {
+        $zip = new \ZipArchive();
+        $docxPath = 'C:/Users/BRYAN/Downloads/descarga_page-0001.docx';
+
+        if ($zip->open($docxPath) !== true) {
+            abort(500, 'No se pudo abrir el documento formato.');
+        }
+
+        $imgData = $zip->getFromName('word/media/image1.jpeg');
+        $zip->close();
+
+        if (!$imgData) {
+            abort(500, 'No se encontró la imagen en el documento formato.');
+        }
+
+        $imagenBase64 = base64_encode($imgData);
+
+        $pdf = Pdf::loadView('bodega.pdf_formato', compact('imagenBase64'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->stream("formato_orden_despacho_{$id}.pdf");
     }
 
     public function create()

@@ -6,10 +6,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">
-        <i class="bi bi-{{ $esEditar ? 'pencil-square' : 'plus-circle' }} text-success"></i>
         {{ $esEditar ? 'Editar movimiento #' . $bodega->id : 'Nuevo movimiento de bodega' }}
     </h3>
-    <a href="{{ route('bodega.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+    <a href="{{ route('bodega.index') }}" class="btn btn-outline-secondary">← Volver</a>
 </div>
 
 <form method="post" action="{{ $esEditar ? route('bodega.update', $bodega) : route('bodega.store') }}">
@@ -119,7 +118,7 @@
         </div>
     </div>
 
-    <button class="btn btn-success btn-lg"><i class="bi bi-save"></i> Guardar</button>
+    <button class="btn btn-success btn-lg">Guardar</button>
     <a href="{{ route('bodega.index') }}" class="btn btn-light btn-lg">Cancelar</a>
 </form>
 @endsection

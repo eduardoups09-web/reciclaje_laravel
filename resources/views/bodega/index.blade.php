@@ -2,30 +2,63 @@
 @section('titulo', 'Bodega')
 
 @section('contenido')
-@php use App\Models\Bodega; @endphp
+@php use App\Models\Bodega; $meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0"><i class="bi bi-truck text-success"></i> Bodega · Despachos</h3>
-    <button onclick="abrirModalBodegaCrear()" class="btn btn-success"><i class="bi bi-plus-lg"></i> Nuevo</button>
+    <h3 class="mb-0">Bodega · Despachos</h3>
+    <button onclick="abrirModalBodegaCrear()" class="btn btn-success">+ Nuevo</button>
 </div>
 
 {{-- Filtros --}}
 <form method="get" action="{{ route('bodega.index') }}" class="card card-body shadow-sm mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-md-3">
-            <label class="form-label small">Fecha Desde</label>
-            <input type="date" name="fecha_desde" value="{{ $filtros['fecha_desde'] ?? '' }}" class="form-control">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small">Fecha Hasta</label>
-            <input type="date" name="fecha_hasta" value="{{ $filtros['fecha_hasta'] ?? '' }}" class="form-control">
+        <div class="col-md-2">
+            <label class="form-label small">Mes</label>
+            <select name="mes" class="form-select">
+                <option value="">Todos</option>
+                @for ($i = 1; $i <= 12; $i++)
+                    <option value="{{ $i }}" @selected(($filtros['mes'] ?? '') == $i)>{{ $meses[$i] }}</option>
+                @endfor
+            </select>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+            <label class="form-label small">Año</label>
+            <select name="anio" class="form-select">
+                <option value="">Todos</option>
+                @for ($y = date('Y'); $y >= 2020; $y--)
+                    <option value="{{ $y }}" @selected(($filtros['anio'] ?? '') == $y)>{{ $y }}</option>
+                @endfor
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Peso</label>
+            <input type="number" name="peso" value="{{ $filtros['peso'] ?? '' }}" class="form-control" step="0.01" placeholder="Ej: 28478">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Orden de Despacho</label>
+            <input type="number" name="consecutivo" value="{{ $filtros['consecutivo'] ?? '' }}" class="form-control" placeholder="Ej: 80">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary">Filtrar</button>
             <a href="{{ route('bodega.index') }}" class="btn btn-outline-secondary">Limpiar</a>
         </div>
     </div>
 </form>
+
+@if ($despachos->count())
+<div class="card card-body shadow-sm mb-3">
+    <strong>Órdenes de Despacho:</strong>
+    <div class="mt-2">
+        @foreach ($despachos as $d)
+            <a href="{{ route('bodega.pdf', ['fecha' => $d->fechainicio, 'despacho' => $d->despacho, 'consecutivo' => $d->consecutivo]) }}"
+               target="_blank"
+               class="btn btn-outline-danger btn-sm me-1 mb-1">
+                Despacho {{ $d->despacho }} - Consec. {{ $d->consecutivo }} (Total: {{ $d->total_cantidad }})
+            </a>
+        @endforeach
+    </div>
+</div>
+@endif
 
 <div class="text-muted small mb-2">{{ number_format($registros->total()) }} registro(s) encontrados.</div>
 
@@ -57,18 +90,18 @@
                     <td class="small">{{ $r->rucDestinatario }}</td>
                     <td>{{ $r->llegada }}</td>
                     <td class="small text-muted">{{ $r->nombreTransportista }}</td>
-                    <td class="small">{{ $r->transportistaRuc }}</td>
+                    <td class="small">{{ $r->rucTransportista }}</td>
                     <td class="small">{{ $r->placaTransportista }}</td>
                     <td class="small">{{ $r->observacion }}</td>
                     <td class="small">{{ $r->motivo }}</td>
                     <td class="small">{{ $r->partida }}</td>
                     <td class="text-end text-nowrap">
-                        <a href="{{ route('bodega.edit', $r) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('bodega.edit', $r) }}" class="btn btn-sm btn-outline-primary">Editar</a>
                         <form method="post" action="{{ route('bodega.destroy', $r) }}" class="d-inline"
                               onsubmit="return confirm('¿Eliminar este registro?');">
                             @csrf
                             @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                         </form>
                     </td>
                 </tr>
@@ -80,7 +113,7 @@
     </div>
 </div>
 
-<div class="mt-3">{{ $registros->links() }}</div>
+<div class="mt-3">{{ $registros->links('pagination::bootstrap-5') }}</div>
 
 {{-- Modal Nuevo/Editar Movimiento Bodega --}}
 <div class="modal fade" id="modalBodega" tabindex="-1" aria-labelledby="modalBodegaLabel" aria-hidden="true">
@@ -100,7 +133,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-success" id="btnGuardarBodega">
-                    <i class="bi bi-save"></i> Guardar
+                    Guardar
                 </button>
             </div>
         </div>
@@ -180,7 +213,7 @@
         })
         .finally(() => {
             btnGuardar.disabled = false;
-            btnGuardar.innerHTML = '<i class="bi bi-save"></i> Guardar';
+            btnGuardar.innerHTML = 'Guardar';
         });
     }
 
@@ -248,6 +281,22 @@
                 }
             });
         }
+
+        const autoLlenados = {
+            'nombreDestinatario': 'FRABRICA DE BATERIA FABRIBAT CIA.LTDA',
+            'rucDestinatario': '1791398262001',
+            'partida': 'Km 291/2 vida Daule Petrillo',
+            'llegada': 'PANAMERICANA NORTE 71/2'
+        };
+
+        Object.entries(autoLlenados).forEach(([name, valor]) => {
+            const input = form.querySelector(`[name="${name}"]`);
+            if (input) {
+                input.addEventListener('focus', () => {
+                    if (!input.value) input.value = valor;
+                });
+            }
+        });
     }
 
 })();

@@ -46,6 +46,8 @@ Route::middleware('auth')->group(function () {
 
     // Inventario / Bodega
     Route::get('/bodega/consecutivo', [BodegaController::class, 'consecutivo'])->name('bodega.consecutivo');
+    Route::get('/bodega/pdf', [BodegaController::class, 'pdf'])->name('bodega.pdf');
+    Route::get('/bodega/pdf-formato/{id}', [BodegaController::class, 'pdfFormato'])->name('bodega.pdfFormato');
     Route::resource('bodega', BodegaController::class)
         ->parameters(['bodega' => 'bodega'])
         ->except(['show']);
