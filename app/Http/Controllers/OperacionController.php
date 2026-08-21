@@ -15,12 +15,11 @@ class OperacionController extends Controller
     public function index(Request $request)
     {
         $tab = $request->input('tab', 'movdetalle');
-        $turnoActual = now()->hour >= 7 && now()->hour < 19 ? 'Diurno' : 'Nocturno';
 
         $filtros = [
             'fecha' => $request->input('fecha') ?? now()->toDateString(),
-            'turno' => $tab === 'movdetalle' ? $request->input('turno') : ($request->input('turno') ?? $turnoActual),
-            'grupo' => $request->input('grupo'),
+            'turno' => $request->input('turno') ?: 'Diurno',
+            'grupo' => $request->input('grupo') ?: '1',
         ];
 
         $registros = null;
@@ -42,7 +41,9 @@ class OperacionController extends Controller
                 $registros = AnalisisCalidad::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fecha', $v))
                     ->when($filtros['turno'], fn($q, $v) => $q->where('turnocalidad', $v))
-                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('grupocalidad', $filtros['grupo']))
+                    ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where(function ($q2) use ($v) {
+                        $q2->where('grupocalidad', $v)->orWhereNull('grupocalidad');
+                    }))
                     ->orderByDesc('fecha')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
                 $recurso = 'calidad';

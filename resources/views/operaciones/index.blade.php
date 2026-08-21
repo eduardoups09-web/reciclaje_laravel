@@ -45,7 +45,6 @@ use App\Models\MovimientoDetalle;
         <div class="col-md-2">
             <label class="form-label small">Turno</label>
             <select name="turno" class="form-select">
-                <option value="">Todos</option>
                 <option value="Diurno" @selected($filtros['turno'] === 'Diurno')>Diurno</option>
                 <option value="Nocturno" @selected($filtros['turno'] === 'Nocturno')>Nocturno</option>
             </select>
@@ -53,7 +52,6 @@ use App\Models\MovimientoDetalle;
         <div class="col-md-2">
             <label class="form-label small">Grupo</label>
             <select name="grupo" class="form-select">
-                <option value="">Todos</option>
                 <option value="1" @selected(($filtros['grupo'] ?? '') === '1')>Grupo 1</option>
                 <option value="2" @selected(($filtros['grupo'] ?? '') === '2')>Grupo 2</option>
             </select>
