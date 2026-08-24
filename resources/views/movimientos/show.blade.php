@@ -8,7 +8,7 @@
         if (is_numeric($val)) return number_format($val, ($val == floor($val) ? 0 : 2));
         return $val;
     }
-    $estados = [1 => 'Abierto', 2 => 'Cerrado', 3 => 'Aprobado'];
+    $estados = [1 => 'Abierto', 2 => 'Cerrado', 4 => 'Aprobado'];
 @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-3">

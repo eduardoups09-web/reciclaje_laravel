@@ -56,7 +56,9 @@
             <div class="col-12">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" name="activar_diurno" value="1"
-                           id="switchDiurno" {{ old('activar_diurno') ? 'checked' : '' }}>
+                           id="switchDiurno"
+                           {{ in_array('Diurno', $turnosExistentes ?? []) ? 'disabled' : '' }}
+                           {{ old('activar_diurno') ? 'checked' : '' }}>
                     <label class="form-check-label fw-semibold text-success" for="switchDiurno">
                         <i class="bi bi-sun-fill"></i> Diurno (7am – 7pm)
                     </label>
@@ -75,7 +77,9 @@
             <div class="col-12">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" name="activar_nocturno" value="1"
-                           id="switchNocturno" {{ old('activar_nocturno') ? 'checked' : '' }}>
+                           id="switchNocturno"
+                           {{ in_array('Nocturno', $turnosExistentes ?? []) ? 'disabled' : '' }}
+                           {{ old('activar_nocturno') ? 'checked' : '' }}>
                     <label class="form-check-label fw-semibold text-primary" for="switchNocturno">
                         <i class="bi bi-moon-fill"></i> Nocturno (7pm – 7am)
                     </label>

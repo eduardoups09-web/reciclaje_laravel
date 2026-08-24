@@ -12,6 +12,9 @@
         .card { border:none; border-radius:.6rem; }
         main { min-height:70vh; }
         .form-label { font-weight:500; margin-bottom:.2rem; }
+        #comboEstado option:hover { background-color: #e9ecef !important; color: #000 !important; }
+        #comboEstado:disabled, #btnActualizarEstado:disabled { opacity: 0.5; cursor: not-allowed; }
+        #btnNuevoMovDetalle:disabled { background-color: #6c757d !important; border-color: #6c757d !important; color: white !important; opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body>

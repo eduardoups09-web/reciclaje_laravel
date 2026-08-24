@@ -67,7 +67,7 @@ use App\Models\MovimientoDetalle;
 <div class="d-flex justify-content-between align-items-center mb-2">
     <div class="text-muted small">{{ number_format($registros->total()) }} registro(s) encontrados.</div>
     @if ($tab === 'movdetalle')
-        <button onclick="abrirModalCrear()" class="btn btn-success btn-sm">
+        <button id="btnNuevoMovDetalle" onclick="abrirModalCrear()" class="btn btn-sm" style="display:none;">
             <i class="bi bi-plus-lg"></i> Nuevo
         </button>
     @elseif ($tab === 'mpnacional')
@@ -97,6 +97,27 @@ use App\Models\MovimientoDetalle;
     @endif
 </div>
 
+{{-- Combobox de Estado para Mov. Detalle --}}
+@if ($tab === 'movdetalle')
+<div class="d-flex justify-content-between align-items-center mb-2" id="comboEstadoContainer"
+     style="display: none;">
+    <div class="d-flex align-items-center gap-2">
+        <label class="form-label small fw-semibold mb-0">Estado:</label>
+        <select id="comboEstado" class="form-select">
+            <option value="1" {{ ($estadoActual->status_id ?? '') == 1 ? 'selected' : '' }}
+                style="background-color: #dc3545; color: white;">Abierto</option>
+            <option value="2" {{ ($estadoActual->status_id ?? '') == 2 ? 'selected' : '' }}
+                style="background-color: #ffc107;">Cerrado</option>
+            <option value="4" {{ ($estadoActual->status_id ?? '') == 4 ? 'selected' : '' }}
+                style="background-color: #198754; color: white;">Aprobado</option>
+        </select>
+        <button id="btnActualizarEstado" class="btn btn-sm btn-primary">
+            <i class="bi bi-check-lg"></i> Actualizar
+        </button>
+    </div>
+</div>
+@endif
+
 {{-- Tabla dinámica --}}
 <div class="card shadow-sm">
     <div class="table-responsive">
@@ -106,7 +127,6 @@ use App\Models\MovimientoDetalle;
                     <thead class="table-light">
                         <tr>
                             <th>Fecha</th><th>Grupo</th><th>Turno</th><th>Estado</th>
-                            <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -120,19 +140,15 @@ use App\Models\MovimientoDetalle;
                                         $estiloEstado = match($r->status_id) {
                                             1 => 'bg-warning text-dark',
                                             2 => 'bg-primary text-white',
-                                            3 => 'bg-success text-white',
+                                            4 => 'bg-success text-white',
                                             default => 'bg-secondary text-white',
                                         };
                                     @endphp
                                     <span class="badge {{ $estiloEstado }}">{{ MovimientoDetalle::ESTADOS[$r->status_id] ?? 'Registrado' }}</span>
                                 </td>
-                                <td class="text-end text-nowrap">
-                                    <button onclick="abrirModalEditar({{ $r->id }})" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></button>
-                                    <form method="post" action="{{ route('movimiento-detalle.destroy', $r) }}" class="d-inline" onsubmit="return confirm('¿Eliminar?');">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
-                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-center text-muted py-4">Sin registros.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted py-4">Sin registros.</td></tr>
                         @endforelse
                     </tbody>
                 @break
@@ -494,6 +510,91 @@ use App\Models\MovimientoDetalle;
     const modalTitle = document.getElementById('modalMovDetalleLabel');
     const btnGuardar = document.getElementById('btnGuardarMovDetalle');
 
+    // Combobox de Estado - Auto-actualizar al cambiar filtros
+    const comboEstado = document.getElementById('comboEstado');
+    const comboContainer = document.getElementById('comboEstadoContainer');
+    const btnActualizarEstado = document.getElementById('btnActualizarEstado');
+    const btnNuevo = document.getElementById('btnNuevoMovDetalle');
+    const filtroFecha = document.querySelector('input[name="fecha"]');
+    const filtroTurno = document.querySelector('select[name="turno"]');
+    const filtroGrupo = document.querySelector('select[name="grupo"]');
+
+    function actualizarEstado() {
+        if (!filtroFecha.value || !filtroTurno.value || !filtroGrupo.value) {
+            comboContainer.style.display = 'none';
+            if (btnNuevo) btnNuevo.style.display = 'none';
+            return;
+        }
+
+        const params = new URLSearchParams({
+            fecha: filtroFecha.value,
+            turno: filtroTurno.value,
+            grupo: filtroGrupo.value
+        });
+
+        fetch('{{ route("movimiento-detalle.obtenerEstado") }}?' + params.toString(), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        .then(data => {
+            if (data.has_records) {
+                comboEstado.value = data.status_id;
+                comboEstado.disabled = false;
+                btnActualizarEstado.disabled = false;
+                comboContainer.style.display = 'flex';
+                if (btnNuevo) {
+                    btnNuevo.disabled = true;
+                    btnNuevo.style.display = 'inline-block';
+                    btnNuevo.className = 'btn btn-sm btn-secondary';
+                }
+            } else {
+                comboEstado.disabled = true;
+                btnActualizarEstado.disabled = true;
+                comboContainer.style.display = 'flex';
+                if (btnNuevo) {
+                    btnNuevo.disabled = false;
+                    btnNuevo.style.display = 'inline-block';
+                    btnNuevo.className = 'btn btn-sm btn-success';
+                }
+            }
+        })
+        .catch(err => console.error('Error actualizando estado:', err));
+    }
+
+    [filtroFecha, filtroTurno, filtroGrupo].forEach(el => {
+        if (el) el.addEventListener('change', actualizarEstado);
+    });
+
+    actualizarEstado();
+
+    // Botón Actualizar Estado
+    if (btnActualizarEstado) {
+        btnActualizarEstado.addEventListener('click', function() {
+            const statusId = comboEstado.value;
+            console.log('Actualizando estado a:', statusId);
+
+            fetch('{{ route("movimiento-detalle.updateEstado") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    fecha: filtroFecha.value,
+                    turno: filtroTurno.value,
+                    status_id: statusId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log('Estado actualizado:', data);
+                if (data.success) location.reload();
+            })
+            .catch(err => console.error('Error guardando estado:', err));
+        });
+    }
+
     window.abrirModalCrear = function() {
         modalTitle.textContent = 'Nuevo movimiento detalle';
         btnGuardar.onclick = guardarCrear;
@@ -605,7 +706,12 @@ use App\Models\MovimientoDetalle;
     window.abrirModalMpNacionalCrear = function() {
         modalTitle.textContent = 'Nueva MP Nacional';
         btnGuardar.onclick = guardarMpNacionalCrear;
-        cargarFormMpNacional('{{ route("mpnacional.create") }}' + window.location.search);
+        const params = new URLSearchParams({
+            fecha: document.querySelector('input[name="fecha"]').value,
+            turno: document.querySelector('select[name="turno"]').value,
+            grupo: document.querySelector('select[name="grupo"]').value
+        });
+        cargarFormMpNacional('{{ route("mpnacional.create") }}?' + params.toString());
     };
 
     window.abrirModalMpNacionalEditar = function(id) {
@@ -701,7 +807,12 @@ use App\Models\MovimientoDetalle;
     window.abrirModalMpImportCrear = function() {
         modalTitle.textContent = 'Nueva MP Importación';
         btnGuardar.onclick = guardarMpImportCrear;
-        cargarFormMpImport('{{ route("mpimport.create") }}' + window.location.search);
+        const params = new URLSearchParams({
+            fecha: document.querySelector('input[name="fecha"]').value,
+            turno: document.querySelector('select[name="turno"]').value,
+            grupo: document.querySelector('select[name="grupo"]').value
+        });
+        cargarFormMpImport('{{ route("mpimport.create") }}?' + params.toString());
     };
 
     window.abrirModalMpImportEditar = function(id) {
@@ -797,7 +908,12 @@ use App\Models\MovimientoDetalle;
     window.abrirModalInsumoCrear = function() {
         modalTitle.textContent = 'Nuevo insumo';
         btnGuardar.onclick = guardarInsumoCrear;
-        cargarFormInsumo('{{ route("insumos.create") }}' + window.location.search);
+        const params = new URLSearchParams({
+            fecha: document.querySelector('input[name="fecha"]').value,
+            turno: document.querySelector('select[name="turno"]').value,
+            grupo: document.querySelector('select[name="grupo"]').value
+        });
+        cargarFormInsumo('{{ route("insumos.create") }}?' + params.toString());
     };
 
     window.abrirModalInsumoEditar = function(id) {
@@ -893,7 +1009,12 @@ use App\Models\MovimientoDetalle;
     window.abrirModalProduccionCrear = function() {
         modalTitle.textContent = 'Nueva producción';
         btnGuardar.onclick = guardarProduccionCrear;
-        cargarFormProduccion('{{ route("produccion.create") }}' + window.location.search);
+        const params = new URLSearchParams({
+            fecha: document.querySelector('input[name="fecha"]').value,
+            turno: document.querySelector('select[name="turno"]').value,
+            grupo: document.querySelector('select[name="grupo"]').value
+        });
+        cargarFormProduccion('{{ route("produccion.create") }}?' + params.toString());
     };
 
     window.abrirModalProduccionEditar = function(id) {
@@ -989,7 +1110,12 @@ use App\Models\MovimientoDetalle;
     window.abrirModalCalidadCrear = function() {
         modalTitle.textContent = 'Nuevo análisis de calidad';
         btnGuardar.onclick = guardarCalidadCrear;
-        cargarFormCalidad('{{ route("calidad.create") }}' + window.location.search);
+        const params = new URLSearchParams({
+            fecha: document.querySelector('input[name="fecha"]').value,
+            turno: document.querySelector('select[name="turno"]').value,
+            grupo: document.querySelector('select[name="grupo"]').value
+        });
+        cargarFormCalidad('{{ route("calidad.create") }}?' + params.toString());
     };
 
     window.abrirModalCalidadEditar = function(id) {

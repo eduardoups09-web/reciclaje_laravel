@@ -29,7 +29,20 @@ class MovimientoDetalleController extends Controller
 
     public function create()
     {
-        $data = ['movimientoDetalle' => new MovimientoDetalle(), 'modo' => 'crear'];
+        $fecha = request('fecha', now()->toDateString());
+        $grupo = request('grupo', '1');
+
+        $turnosExistentes = MovimientoDetalle::activos()
+            ->where('fecha', $fecha)
+            ->where('grupo', $grupo)
+            ->pluck('turno')
+            ->toArray();
+
+        $data = [
+            'movimientoDetalle' => new MovimientoDetalle(),
+            'modo' => 'crear',
+            'turnosExistentes' => $turnosExistentes,
+        ];
 
         if (request()->ajax()) {
             return view('movimientodetalle._form-modal', $data);
@@ -105,6 +118,40 @@ class MovimientoDetalleController extends Controller
             ->with('success', "Movimiento detalle #{$movimientoDetalle->id} eliminado.");
     }
 
+    public function updateEstado(Request $request)
+    {
+        $request->validate([
+            'fecha'     => ['required', 'date'],
+            'turno'     => ['required', 'in:' . implode(',', MovimientoDetalle::TURNOS)],
+            'status_id' => ['required', 'in:1,2,4'],
+        ]);
+
+        MovimientoDetalle::activos()
+            ->where('fecha', $request->fecha)
+            ->where('turno', $request->turno)
+            ->update(['status_id' => $request->status_id]);
+
+        return response()->json(['success' => true, 'message' => 'Estado actualizado correctamente.']);
+    }
+
+    public function obtenerEstado(Request $request)
+    {
+        $request->validate([
+            'fecha' => ['required', 'date'],
+            'turno' => ['required', 'in:' . implode(',', MovimientoDetalle::TURNOS)],
+            'grupo' => ['required', 'in:' . implode(',', MovimientoDetalle::GRUPOS)],
+        ]);
+
+        $registro = MovimientoDetalle::obtenerEstadoActual(
+            $request->fecha, $request->turno, $request->grupo
+        );
+
+        return response()->json([
+            'status_id'   => $registro ? $registro->status_id : null,
+            'has_records' => $registro !== null,
+        ]);
+    }
+
     private function validar(Request $request): array
     {
         $esCrear = $request->isMethod('post');
@@ -113,7 +160,7 @@ class MovimientoDetalleController extends Controller
         if ($esCrear) {
             $rules = [
                 'fecha'             => ['required', 'date'],
-                'status_id'         => ['required', 'in:1,2,3'],
+                'status_id'         => ['required', 'in:1,2,4'],
                 'activar_diurno'    => ['nullable'],
                 'activar_nocturno'  => ['nullable'],
                 'grupo_diurno'      => ['nullable', "in:{$grupos}"],
@@ -139,7 +186,7 @@ class MovimientoDetalleController extends Controller
                 'fecha'     => ['required', 'date'],
                 'grupo'     => ['required', "in:{$grupos}"],
                 'turno'     => ['required', 'in:' . implode(',', MovimientoDetalle::TURNOS)],
-                'status_id' => ['required', 'in:1,2,3'],
+                'status_id' => ['required', 'in:1,2,4'],
             ];
         }
 

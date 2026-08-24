@@ -15,7 +15,7 @@ class MovimientoDetalle extends Model
 
     public const GRUPOS = ['1', '2'];
     public const TURNOS = ['Diurno', 'Nocturno'];
-    public const ESTADOS = [1 => 'Abierto', 2 => 'Cerrado', 3 => 'Aprobado'];
+    public const ESTADOS = [1 => 'Abierto', 2 => 'Cerrado', 4 => 'Aprobado'];
 
     public function scopeActivos($query)
     {
@@ -34,5 +34,15 @@ class MovimientoDetalle extends Model
             $query->where('grupo', $filtros['grupo']);
         }
         return $query;
+    }
+
+    public static function obtenerEstadoActual(string $fecha, string $turno, string $grupo): ?self
+    {
+        return static::activos()
+            ->where('fecha', $fecha)
+            ->where('turno', $turno)
+            ->where('grupo', $grupo)
+            ->orderByDesc('id')
+            ->first();
     }
 }

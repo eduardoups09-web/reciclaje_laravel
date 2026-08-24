@@ -74,6 +74,10 @@ Route::middleware('auth')->group(function () {
         ->except(['show']);
 
     // Movimiento Detalle
+    Route::get('movimiento-detalle/estado', [MovimientoDetalleController::class, 'obtenerEstado'])
+        ->name('movimiento-detalle.obtenerEstado');
+    Route::post('movimiento-detalle/estado', [MovimientoDetalleController::class, 'updateEstado'])
+        ->name('movimiento-detalle.updateEstado');
     Route::resource('movimiento-detalle', MovimientoDetalleController::class)
         ->parameters(['movimiento-detalle' => 'movimiento_detalle'])
         ->except(['show']);

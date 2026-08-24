@@ -9,6 +9,7 @@ use App\Models\MpImport;
 use App\Models\MpNacional;
 use App\Models\Salida;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OperacionController extends Controller
 {
@@ -80,19 +81,28 @@ class OperacionController extends Controller
                 break;
 
             case 'movdetalle':
+                $statusFiltro = $request->input('status_id');
+
+                $estadoActual = MovimientoDetalle::obtenerEstadoActual(
+                    $filtros['fecha'], $filtros['turno'], $filtros['grupo']
+                );
+
                 $registros = MovimientoDetalle::activos()
                     ->when($filtros['fecha'], fn($q, $v) => $q->where('fecha', $v))
                     ->when(!empty($filtros['turno']), fn($q, $v) => $q->where('turno', $v))
                     ->when(!empty($filtros['grupo']), fn($q, $v) => $q->where('grupo', $filtros['grupo']))
+                    ->when($statusFiltro, fn($q, $v) => $q->where('status_id', $v))
                     ->orderByDesc('fecha')->orderByDesc('id')
                     ->paginate(25)->withQueryString();
+
                 $recurso = 'movimiento-detalle';
                 break;
         }
 
         $totales = $tab === 'produccion' ? ($totales ?? null) : null;
+        $estadoActual = $estadoActual ?? null;
 
-        return view('operaciones.index', compact('tab', 'filtros', 'registros', 'recurso', 'totales'));
+        return view('operaciones.index', compact('tab', 'filtros', 'registros', 'recurso', 'totales', 'estadoActual'));
     }
 
     /**

@@ -49,7 +49,7 @@
                     <td>{{ $r->fecha }}</td>
                     <td><span class="badge bg-secondary">G{{ $r->grupo }}</span></td>
                     <td>{{ $r->turno }}</td>
-                    <td>{{ $r->status_id == 3 ? 'Aprobado' : 'Registrado' }}</td>
+                    <td>{{ $r->status_id == 4 ? 'Aprobado' : ($r->status_id == 2 ? 'Cerrado' : 'Abierto') }}</td>
                     <td class="text-end text-nowrap">
                         <a href="{{ route('movimiento-detalle.edit', $r) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                         <form method="post" action="{{ route('movimiento-detalle.destroy', $r) }}" class="d-inline"
