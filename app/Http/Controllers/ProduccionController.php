@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AnalisisCalidad;
+use App\Models\IngresoRc;
 use App\Models\Salida;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ProduccionController extends Controller
 {
@@ -57,6 +59,7 @@ class ProduccionController extends Controller
         $data['usernameproduccion'] = $this->username();
 
         $salida = Salida::create($data);
+        $this->recalcularIngresosRc($data['fechasalida'], $data['gruposalida'], $data['turnosalida']);
 
         $descargas = $data['descargas'] ?? 0;
         if ($descargas > 0) {
@@ -99,6 +102,7 @@ class ProduccionController extends Controller
         $data = $this->validar($request, $produccion->id);
         $data = $this->guardarFactores($request, $data);
         $produccion->update($data);
+        $this->recalcularIngresosRc($produccion->fechasalida, $produccion->gruposalida, $produccion->turnosalida);
 
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => "Registro #{$produccion->id} actualizado."]);
@@ -112,6 +116,7 @@ class ProduccionController extends Controller
     public function destroy(Salida $produccion)
     {
         $produccion->update(['is_deleted' => 1]);
+        $this->recalcularIngresosRc($produccion->fechasalida, $produccion->gruposalida, $produccion->turnosalida);
 
         return redirect()->route('operaciones.index', ['tab' => 'produccion'])
             ->with('success', "Registro #{$produccion->id} eliminado.");
@@ -203,6 +208,46 @@ class ProduccionController extends Controller
     {
         $u = Auth::user();
         return $u->username ?: $u->name;
+    }
+
+    /**
+     * Recalcula los totales de salidas (con factor) e insumos (carbonatoSodio)
+     * para fecha+grupo+turno y los guarda en la tabla ingresosrc.
+     */
+    private function recalcularIngresosRc(string $fecha, $grupo, string $turno): void
+    {
+        $r = DB::table('salidas')
+            ->where('is_deleted', 0)
+            ->where('fechasalida', $fecha)
+            ->where('gruposalida', $grupo)
+            ->where('turnosalida', $turno)
+            ->selectRaw('
+                SUM(metalico * COALESCE(calculablemeta, 0.97)) as salidas_metalico,
+                SUM(rejilla * COALESCE(calculablereji, 0.97)) as salidas_rejilla,
+                SUM(metalicofino * COALESCE(calculablemetafino, 0.97)) as salidas_metalicofino,
+                SUM(pastadesulfurada * COALESCE(calculablepasta, 0.97)) as salidas_pastadesulfurada,
+                SUM(pastasin * COALESCE(calculablepastasin, 0.97)) as salidas_pastasin
+            ')->first();
+
+        $rInsumos = DB::table('insumos')
+            ->where('is_deleted', 0)
+            ->where('fecha', $fecha)
+            ->where('grupoinsumo', $grupo)
+            ->where('turnoinsumo', $turno)
+            ->selectRaw('SUM(COALESCE(carbonatoSodio, 0)) as carbonatoSodio')
+            ->first();
+
+        DB::table('ingresosrc')->updateOrInsert(
+            ['fecha' => $fecha, 'grupo' => $grupo, 'turno' => $turno],
+            [
+                'salidas_metalico'         => round($r->salidas_metalico ?? 0),
+                'salidas_rejilla'          => round($r->salidas_rejilla ?? 0),
+                'salidas_metalicofino'     => round($r->salidas_metalicofino ?? 0),
+                'salidas_pastadesulfurada' => round($r->salidas_pastadesulfurada ?? 0),
+                'salidas_pastasin'         => round($r->salidas_pastasin ?? 0),
+                'carbonatoSodio'           => round($rInsumos->carbonatoSodio ?? 0),
+            ]
+        );
     }
 
 }

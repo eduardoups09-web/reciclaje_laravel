@@ -57,9 +57,13 @@
                 </optgroup>
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <button class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
             <a href="{{ route('movimientos.index') }}" class="btn btn-outline-secondary">Limpiar</a>
+            <a href="{{ route('reporte-reciclaje.exportar', ['mes' => $filtros['mes'], 'anio' => $filtros['anio']]) }}"
+               class="btn btn-success" title="Descargar Reporte Excel">
+               <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
         </div>
     </div>
 </form>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Insumo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class InsumoController extends Controller
 {
@@ -46,6 +47,7 @@ class InsumoController extends Controller
         $data['usernameinsumo'] = $this->username();
 
         $i = Insumo::create($data);
+        $this->recalcularIngresosRcInsumos($data['fecha'], $data['grupoinsumo'], $data['turnoinsumo']);
 
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => "Insumo #{$i->id} creado correctamente."]);
@@ -71,6 +73,7 @@ class InsumoController extends Controller
     {
         abort_if($insumo->is_deleted, 404);
         $insumo->update($this->validar($request));
+        $this->recalcularIngresosRcInsumos($insumo->fecha, $insumo->grupoinsumo, $insumo->turnoinsumo);
 
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => "Insumo #{$insumo->id} actualizado."]);
@@ -83,6 +86,7 @@ class InsumoController extends Controller
     public function destroy(Insumo $insumo)
     {
         $insumo->update(['is_deleted' => 1]);
+        $this->recalcularIngresosRcInsumos($insumo->fecha, $insumo->grupoinsumo, $insumo->turnoinsumo);
 
         return redirect()->route('operaciones.index', ['tab' => 'insumos'])
             ->with('success', "Insumo #{$insumo->id} eliminado.");
@@ -106,5 +110,21 @@ class InsumoController extends Controller
     {
         $u = Auth::user();
         return $u->username ?: $u->name;
+    }
+
+    private function recalcularIngresosRcInsumos(string $fecha, $grupo, string $turno): void
+    {
+        $r = DB::table('insumos')
+            ->where('is_deleted', 0)
+            ->where('fecha', $fecha)
+            ->where('grupoinsumo', $grupo)
+            ->where('turnoinsumo', $turno)
+            ->selectRaw('SUM(COALESCE(carbonatoSodio, 0)) as carbonatoSodio')
+            ->first();
+
+        DB::table('ingresosrc')->updateOrInsert(
+            ['fecha' => $fecha, 'grupo' => $grupo, 'turno' => $turno],
+            ['carbonatoSodio' => round($r->carbonatoSodio ?? 0)]
+        );
     }
 }

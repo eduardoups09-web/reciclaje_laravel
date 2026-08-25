@@ -13,6 +13,7 @@ use App\Http\Controllers\OperacionController;
 use App\Http\Controllers\ProduccionController;
 use App\Http\Controllers\ReporteGerencialController;
 use App\Http\Controllers\ReporteGerencialPabloController;
+use App\Http\Controllers\ReporteReciclajeController;
 use App\Http\Controllers\SaldoController;
 use Illuminate\Support\Facades\Route;
 
@@ -91,4 +92,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('pablo', ReporteGerencialPabloController::class)
         ->parameters(['pablo' => 'reporte'])
         ->except(['show']);
+
+    // Reporte Reciclaje (Excel)
+    Route::get('/reporte-reciclaje', [ReporteReciclajeController::class, 'index'])
+        ->name('reporte-reciclaje.index');
+    Route::get('/reporte-reciclaje/exportar', [ReporteReciclajeController::class, 'exportar'])
+        ->name('reporte-reciclaje.exportar');
 });
