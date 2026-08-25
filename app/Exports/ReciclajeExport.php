@@ -30,6 +30,7 @@ class ReciclajeExport
         $this->writeHeaders($sheet);
         $this->writeData($sheet);
         $this->setColumnWidths($sheet);
+        $sheet->setAutoFilter('A4:AG4');
 
         return $spreadsheet;
     }
@@ -291,7 +292,7 @@ class ReciclajeExport
                 $isTop = ($ar === $blockStart);
                 $isBottom = ($ar === $blockEnd);
 
-                $sheet->getStyle("AI{$ar}:AY{$ar}")->applyFromArray([
+                $sheet->getStyle("AI{$ar}:AV{$ar}")->applyFromArray([
                     'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                     'borders' => [
@@ -377,7 +378,7 @@ class ReciclajeExport
                     "=ROUND(AVERAGE(AK{$analysisRow}:AU{$analysisRow}),2)");
             }
 
-            $sheet->getStyle("AJ{$analysisRow}:AY{$analysisRow}")->applyFromArray([
+            $sheet->getStyle("AJ{$analysisRow}:AV{$analysisRow}")->applyFromArray([
                 'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                 'borders' => [
@@ -387,7 +388,7 @@ class ReciclajeExport
                     'bottom' => ['borderStyle' => Border::BORDER_THICK, 'color' => ['argb' => 'FF888888']],
                 ],
             ]);
-            $this->setFill($sheet, "AJ{$analysisRow}:AY{$analysisRow}", 'FF2980B9');
+            $this->setFill($sheet, "AJ{$analysisRow}:AV{$analysisRow}", 'FF2980B9');
 
             $analysisRow++;
         }
