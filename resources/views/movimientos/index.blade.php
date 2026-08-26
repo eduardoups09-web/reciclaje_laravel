@@ -64,6 +64,10 @@
                class="btn btn-success" title="Descargar Reporte Excel">
                <i class="bi bi-file-earmark-excel"></i> Excel
             </a>
+            <a href="{{ route('reporte-reciclaje.exportar-pdf', ['mes' => $filtros['mes'], 'anio' => $filtros['anio']]) }}"
+               class="btn btn-danger" title="Descargar Reporte PDF">
+               <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
         </div>
     </div>
 </form>

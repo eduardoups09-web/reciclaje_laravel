@@ -9,7 +9,7 @@
                     <h5 class="mb-0">Descargar Reporte de Reciclaje</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('reporte-reciclaje.exportar') }}" method="GET">
+                    <form id="reporteForm">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Mes <span class="text-danger">*</span></label>
@@ -34,9 +34,12 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="mt-4 text-center">
-                            <button type="submit" class="btn btn-success btn-lg">
+                        <div class="mt-4 text-center d-flex justify-content-center gap-3">
+                            <button type="submit" class="btn btn-success btn-lg" onclick="submitForm('{{ route('reporte-reciclaje.exportar') }}')">
                                 <i class="bi bi-download"></i> Descargar Excel
+                            </button>
+                            <button type="button" class="btn btn-danger btn-lg" onclick="submitForm('{{ route('reporte-reciclaje.exportar-pdf') }}')">
+                                <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
                             </button>
                         </div>
                     </form>
@@ -46,3 +49,13 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function submitForm(url) {
+        var form = document.getElementById('reporteForm');
+        form.action = url;
+        form.submit();
+    }
+</script>
+@endpush

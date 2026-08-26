@@ -93,9 +93,11 @@ Route::middleware('auth')->group(function () {
         ->parameters(['pablo' => 'reporte'])
         ->except(['show']);
 
-    // Reporte Reciclaje (Excel)
+    // Reporte Reciclaje (Excel + PDF)
     Route::get('/reporte-reciclaje', [ReporteReciclajeController::class, 'index'])
         ->name('reporte-reciclaje.index');
     Route::get('/reporte-reciclaje/exportar', [ReporteReciclajeController::class, 'exportar'])
         ->name('reporte-reciclaje.exportar');
+    Route::get('/reporte-reciclaje/exportar-pdf', [ReporteReciclajeController::class, 'exportarPdf'])
+        ->name('reporte-reciclaje.exportar-pdf');
 });
