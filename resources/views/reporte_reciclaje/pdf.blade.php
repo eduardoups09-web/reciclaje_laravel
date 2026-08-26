@@ -13,7 +13,7 @@
         .page { page-break-after: always; }
         .page:last-child { page-break-after: avoid; }
 
-        .title-row { background-color: #2D5E8B; color: #fff; font-size: 10pt; font-weight: bold; font-style: italic; text-decoration: underline; text-align: center; padding: 4px 0; }
+        .title-row { background-color: #2D5E8B; color: #fff; font-size: 10pt; font-weight: bold; text-decoration: underline; text-align: center; padding: 4px 0; }
         .section-header { background-color: #8DB4E2; color: #fff; font-weight: bold; font-size: 7.5pt; text-align: center; }
         .col-header { background-color: #5B9BD5; color: #fff; font-weight: bold; font-size: 6.5pt; text-align: center; }
 
@@ -24,7 +24,7 @@
         .total-row { background-color: #D9E2F3; font-weight: bold; }
         .total-acum-row { background-color: #B4C6E7; font-weight: bold; }
 
-        .page-num { text-align: right; font-size: 7pt; font-style: italic; margin-top: 2px; }
+        .page-num { text-align: right; font-size: 7pt; margin-top: 2px; }
 
         .rend-table { margin-top: 6px; width: 100%; }
         .rend-table th { background-color: #5B9BD5; font-size: 7pt; }

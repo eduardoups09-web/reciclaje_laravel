@@ -48,7 +48,7 @@ class ReciclajeExport
         $sheet->mergeCells('A1:AG1');
         $sheet->setCellValue('A1', 'REPORTE DE RECICLAJE');
         $sheet->getStyle('A1')->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'underline' => 'single', 'size' => 16, 'color' => ['argb' => 'FFFFFFFF']],
+            'font' => ['bold' => true, 'italic' => false, 'underline' => 'single', 'size' => 16, 'color' => ['argb' => 'FFFFFFFF']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
         ]);
         $this->setFill($sheet, 'A1:AG1', 'FF2D5E8B');
@@ -57,7 +57,7 @@ class ReciclajeExport
         $sheet->mergeCells('A2:AG2');
         $sheet->setCellValue('A2', "MES: {$mesStr} | ANO: {$this->anio}");
         $sheet->getStyle('A2')->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'underline' => 'single', 'size' => 12, 'color' => ['argb' => 'FFFFFFFF']],
+            'font' => ['bold' => true, 'italic' => false, 'underline' => 'single', 'size' => 12, 'color' => ['argb' => 'FFFFFFFF']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
         ]);
         $this->setFill($sheet, 'A2:AG2', 'FF4F81BD');
@@ -80,7 +80,7 @@ class ReciclajeExport
 
         foreach (['A3:H3', 'I3:J3', 'K3:L3', 'M3:O3', 'P3:Q3', 'R3:AC3'] as $range) {
             $sheet->getStyle($range)->applyFromArray([
-                'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
+                'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
             ]);
@@ -88,7 +88,7 @@ class ReciclajeExport
         }
 
         $sheet->getStyle('AI3:AV3')->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'size' => 14, 'color' => ['argb' => 'FFFFFFFF']],
+            'font' => ['bold' => true, 'italic' => false, 'size' => 14, 'color' => ['argb' => 'FFFFFFFF']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
         ]);
         $this->setFill($sheet, 'AI3:AV3', 'FFE0A96D');
@@ -124,7 +124,7 @@ class ReciclajeExport
 
         // Main headers A4:AG4
         $sheet->getStyle('A4:AG4')->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
+            'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom', 'wrapText' => true],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
         ]);
@@ -132,7 +132,7 @@ class ReciclajeExport
 
         // Analysis headers AI4:AV4
         $sheet->getStyle('AI4:AV4')->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'size' => 12, 'color' => ['argb' => 'FFFFFFFF']],
+            'font' => ['bold' => true, 'italic' => false, 'size' => 12, 'color' => ['argb' => 'FFFFFFFF']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
         ]);
@@ -141,17 +141,140 @@ class ReciclajeExport
 
     protected function writeData($sheet): void
     {
-        $datos = DB::table('view_consultamovimientos')
-            ->whereMonth('fecha', $this->mes)
-            ->whereYear('fecha', $this->anio)
-            ->orderBy('fecha')
-            ->orderByRaw("CASE WHEN turno = 'Diurno' THEN 0 ELSE 1 END")
-            ->orderBy('grupo')
-            ->get();
+        $mesStr = str_pad($this->mes, 2, '0', STR_PAD_LEFT);
+        $mesSiguiente = $this->mes + 1;
+        $anioSiguiente = $this->anio;
+        if ($mesSiguiente > 12) { $mesSiguiente = 1; $anioSiguiente++; }
+        $mesStrSig = str_pad($mesSiguiente, 2, '0', STR_PAD_LEFT);
+        $fechaInicio = "{$this->anio}-{$mesStr}-01";
+        $fechaFin = "{$anioSiguiente}-{$mesStrSig}-01";
+
+        $datos = collect(DB::select("
+            SELECT
+                md.fecha, md.grupo, md.turno, md.status_id, md.is_ajuste,
+                mn.pesobateria, mn.bateriatipo,
+                mi.pesobateriaimport, mi.bateriatipoimport, mi.metalicoimport, mi.pastaimport, mi.placasimport,
+                i_carb.carbonatoSodio,
+                s.metalico AS salidas_metalico, s.rejilla AS salidas_rejilla,
+                s.metalicofino AS salidas_metalicofino, s.pastadesulfurada AS salidas_pastadesulfurada,
+                s.pastasin AS salidas_pastasin,
+                s.descargas AS salidas_descargas,
+                s.polipropilenokg AS salidas_polipropilenokg, s.abskg AS salidas_abskg,
+                s.separadorkg AS salidas_separadorkg,
+                c.azufre AS calidad_azufre, c.humedad AS calidad_humedad,
+                CASE WHEN md.turno = 'Diurno' THEN
+                    CAST(COALESCE(ing_nac.cantidad_total, 0) AS UNSIGNED)
+                    + CAST(COALESCE(ing_ext.cantidad_total, 0) AS UNSIGNED)
+                END AS total_recepcion,
+                CASE WHEN md.turno = 'Diurno' THEN
+                    COALESCE(b.cantidad_bodega, 0)
+                    + CAST(COALESCE(ing_maq.cantidad_total, 0) AS UNSIGNED)
+                END AS total_despacho,
+                COALESCE(mn.pesobateria, 0)
+                    + CAST(COALESCE(mi.pesobateriaimport, 0) AS UNSIGNED) AS total_consumo
+            FROM movimientodetalle AS md
+            LEFT JOIN (
+                SELECT fechanacional, turnonacional, gruponacional,
+                       ROUND(COALESCE(SUM(pesobateria), 0), 0) AS pesobateria,
+                       TRIM(BOTH ',' FROM COALESCE(GROUP_CONCAT(DISTINCT REPLACE(bateriatipo, ',', '') SEPARATOR ','), '')) AS bateriatipo
+                FROM mpnacional
+                WHERE is_deleted = 0 AND is_ajuste = 0
+                  AND fechanacional >= ? AND fechanacional < ?
+                GROUP BY fechanacional, turnonacional, gruponacional
+            ) mn ON mn.fechanacional = md.fecha AND mn.turnonacional = md.turno AND mn.gruponacional = md.grupo
+            LEFT JOIN (
+                SELECT fechaimport, turnoimport, grupoimport,
+                       ROUND(COALESCE(SUM(pesobateriaimport), 0), 0) AS pesobateriaimport,
+                       TRIM(BOTH ',' FROM COALESCE(GROUP_CONCAT(DISTINCT REPLACE(bateriatipoimport, ',', '') SEPARATOR ','), '')) AS bateriatipoimport,
+                       ROUND(COALESCE(SUM(metalicoimport), 0), 0) AS metalicoimport,
+                       ROUND(COALESCE(SUM(pastaimport), 0), 0) AS pastaimport,
+                       ROUND(COALESCE(SUM(placasimport), 0), 0) AS placasimport
+                FROM mpimport
+                WHERE is_deleted = 0 AND is_ajuste = 0
+                  AND fechaimport >= ? AND fechaimport < ?
+                GROUP BY fechaimport, turnoimport, grupoimport
+            ) mi ON mi.fechaimport = md.fecha AND mi.turnoimport = md.turno AND mi.grupoimport = md.grupo
+            LEFT JOIN (
+                SELECT fecha, turnoinsumo, grupoinsumo,
+                       ROUND(COALESCE(SUM(carbonatoSodio), 0), 0) AS carbonatoSodio
+                FROM insumos
+                WHERE is_deleted = 0 AND is_ajuste = 0
+                  AND fecha >= ? AND fecha < ?
+                GROUP BY fecha, turnoinsumo, grupoinsumo
+            ) i_carb ON i_carb.fecha = md.fecha AND i_carb.turnoinsumo = md.turno AND i_carb.grupoinsumo = md.grupo
+            LEFT JOIN (
+                SELECT fechasalida, turnosalida, gruposalida,
+                       ROUND(COALESCE(SUM(metalico) * COALESCE(MAX(calculablemeta), 1), 0), 0) AS metalico,
+                       ROUND(COALESCE(SUM(rejilla) * COALESCE(MAX(calculablereji), 1), 0), 0) AS rejilla,
+                       ROUND(COALESCE(SUM(metalicofino) * COALESCE(MAX(calculablemetafino), 1), 0), 0) AS metalicofino,
+                       ROUND(COALESCE(SUM(pastadesulfurada) * COALESCE(MAX(calculablepasta), 1), 0), 0) AS pastadesulfurada,
+                       ROUND(COALESCE(SUM(pastasin) * COALESCE(MAX(calculablepasta), 1), 0), 0) AS pastasin,
+                       ROUND(COALESCE(SUM(polipropilenokg), 0), 0) AS polipropilenokg,
+                       ROUND(COALESCE(SUM(abskg), 0), 0) AS abskg,
+                       ROUND(COALESCE(SUM(separadorkg), 0), 0) AS separadorkg,
+                       COALESCE(SUM(descargas), 0) AS descargas
+                FROM salidas
+                WHERE is_deleted = 0 AND is_ajuste = 0
+                  AND fechasalida >= ? AND fechasalida < ?
+                GROUP BY fechasalida, turnosalida, gruposalida
+            ) s ON s.fechasalida = md.fecha AND s.turnosalida = md.turno AND s.gruposalida = md.grupo
+            LEFT JOIN (
+                SELECT fecha, turnocalidad,
+                       AVG(azufre) AS azufre, AVG(humedad) AS humedad
+                FROM analisiscalidad
+                WHERE is_deleted = 0 AND is_ajuste = 0
+                  AND fecha >= ? AND fecha < ?
+                GROUP BY fecha, turnocalidad
+            ) c ON c.fecha = md.fecha AND c.turnocalidad = md.turno
+            LEFT JOIN (
+                SELECT FechaDet, SUM(Cantidad) AS cantidad_total
+                FROM ingresosinventarios
+                WHERE Tipo = 'IBA' AND Procedencia <> 'EXTRANJERA'
+                  AND FechaDet >= ? AND FechaDet < ?
+                GROUP BY FechaDet
+            ) ing_nac ON ing_nac.FechaDet = md.fecha
+            LEFT JOIN (
+                SELECT FechaDet, SUM(Cantidad) AS cantidad_total
+                FROM ingresosinventarios
+                WHERE Tipo = 'IBA' AND Procedencia = 'EXTRANJERA'
+                  AND FechaDet >= ? AND FechaDet < ?
+                GROUP BY FechaDet
+            ) ing_ext ON ing_ext.FechaDet = md.fecha
+            LEFT JOIN (
+                SELECT FechaDet, SUM(Cantidad) AS cantidad_total
+                FROM ingresosinventarios
+                WHERE Tipo = 'IBA' AND Procedencia <> 'EXTRANJERA'
+                  AND Producto IN ('Baterias Humedas Maquila','Baterias Estacionarias Maquila')
+                  AND FechaDet >= ? AND FechaDet < ?
+                GROUP BY FechaDet
+            ) ing_maq ON ing_maq.FechaDet = md.fecha
+            LEFT JOIN (
+                SELECT fechainicio, SUM(cantidad) AS cantidad_bodega
+                FROM bodega
+                WHERE is_deleted = 0
+                  AND fechainicio >= ? AND fechainicio < ?
+                GROUP BY fechainicio
+            ) b ON b.fechainicio = md.fecha
+            WHERE md.is_deleted = 0 AND md.is_ajuste = 0
+              AND md.fecha >= ? AND md.fecha < ?
+            GROUP BY md.fecha, md.grupo, md.turno
+            ORDER BY md.fecha, CASE WHEN md.turno = 'Diurno' THEN 0 ELSE 1 END, md.grupo
+        ", [
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+            $fechaInicio, $fechaFin,
+        ]));
 
         $analisis = DB::table('analisiscalidad')
-            ->whereMonth('fecha', $this->mes)
-            ->whereYear('fecha', $this->anio)
+            ->where('fecha', '>=', $fechaInicio)
+            ->where('fecha', '<', $fechaFin)
             ->where('is_deleted', 0)
             ->orderBy('fecha')
             ->orderBy('turnocalidad')
@@ -162,8 +285,8 @@ class ReciclajeExport
             });
 
         $saldos = DB::table('saldosinsert')
-            ->whereMonth('fechasaldoinsert', $this->mes)
-            ->whereYear('fechasaldoinsert', $this->anio)
+            ->where('fechasaldoinsert', '>=', $fechaInicio)
+            ->where('fechasaldoinsert', '<', $fechaFin)
             ->get()
             ->groupBy(function ($r) {
                 return $r->fechasaldoinsert . '-' . $r->turnosaldoinsert;
@@ -229,7 +352,7 @@ class ReciclajeExport
             $sheet->setCellValue("AG{$row}", round((float) ($d->calidad_humedad ?? 0), 2));
 
             $sheet->getStyle("A{$row}:AG{$row}")->applyFromArray([
-                'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
+                'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FF000000']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
             ]);
@@ -293,7 +416,7 @@ class ReciclajeExport
                 $isBottom = ($ar === $blockEnd);
 
                 $sheet->getStyle("AI{$ar}:AV{$ar}")->applyFromArray([
-                    'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
+                    'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FF000000']],
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                     'borders' => [
                         'left' => ['borderStyle' => Border::BORDER_THICK, 'color' => ['argb' => 'FF888888']],
@@ -305,7 +428,7 @@ class ReciclajeExport
 
                 // AV column: blue fill, white font
                 $sheet->getStyle("AV{$ar}")->applyFromArray([
-                    'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
+                    'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
                     'borders' => [
                         'right' => ['borderStyle' => Border::BORDER_THICK, 'color' => ['argb' => 'FF888888']],
                     ],
@@ -379,7 +502,7 @@ class ReciclajeExport
             }
 
             $sheet->getStyle("AJ{$analysisRow}:AV{$analysisRow}")->applyFromArray([
-                'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
+                'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                 'borders' => [
                     'left' => ['borderStyle' => Border::BORDER_THICK, 'color' => ['argb' => 'FF888888']],
@@ -420,7 +543,7 @@ class ReciclajeExport
             $sheet->setCellValue("AG{$totalsRow}", "=IF(SUMIF(AG5:AG{$LDR},\">0\",X5:X{$LDR})<>0,ROUND(SUMPRODUCT(X5:X{$LDR},AG5:AG{$LDR})/SUMIF(AG5:AG{$LDR},\">0\",X5:X{$LDR}),2),0)");
 
             $sheet->getStyle("A{$totalsRow}:AG{$totalsRow}")->applyFromArray([
-                'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
+                'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FFFFFFFF']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'bottom'],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
             ]);
@@ -453,7 +576,7 @@ class ReciclajeExport
         $sheet->setCellValue("J{$r}", 'TOTAL UPS');
         $sheet->setCellValue("M{$r}", 'TOTAL METÁLICOS');
         $sheet->getStyle("A{$r}:O{$r}")->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
+            'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FF000000']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
         ]);
@@ -498,7 +621,7 @@ class ReciclajeExport
                 "=IF(SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*({$col}5:{$col}{$LDR}>0)*(M5:M{$LDR}+N5:N{$LDR}+O5:O{$LDR}))=0,0,ROUND(SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*({$col}5:{$col}{$LDR}>0)*{$col}5:{$col}{$LDR})/SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*({$col}5:{$col}{$LDR}>0)*(M5:M{$LDR}+N5:N{$LDR}+O5:O{$LDR}))*100,2))");
 
             $sheet->getStyle("A{$r}:O{$r}")->applyFromArray([
-                'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
+                'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FF000000']],
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
             ]);
@@ -527,7 +650,7 @@ class ReciclajeExport
         $sheet->setCellValue("O{$r}",
             "=IF(SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*(M5:M{$LDR}+N5:N{$LDR}+O5:O{$LDR}))=0,0,ROUND(SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*(R5:R{$LDR}+T5:T{$LDR}+V5:V{$LDR}+X5:X{$LDR}))/SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*(M5:M{$LDR}+N5:N{$LDR}+O5:O{$LDR}))*100,2))");
         $sheet->getStyle("A{$r}:O{$r}")->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
+            'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FF000000']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
         ]);
@@ -555,7 +678,7 @@ class ReciclajeExport
         $sheet->setCellValue("O{$r}",
             "=IF(SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*(AF5:AF{$LDR}>0)*X5:X{$LDR})=0,0,ROUND(SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*(AF5:AF{$LDR}>0)*X5:X{$LDR}*AF5:AF{$LDR})/SUMPRODUCT(({$condMetal})*(X5:X{$LDR}<>\"\")*(X5:X{$LDR}<>0)*(AF5:AF{$LDR}>0)*X5:X{$LDR}),2))");
         $sheet->getStyle("A{$r}:O{$r}")->applyFromArray([
-            'font' => ['bold' => true, 'italic' => true, 'size' => 11, 'color' => ['argb' => 'FF000000']],
+            'font' => ['bold' => true, 'italic' => false, 'size' => 11, 'color' => ['argb' => 'FF000000']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF000000']]],
         ]);
