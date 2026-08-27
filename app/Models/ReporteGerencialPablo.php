@@ -83,7 +83,7 @@ class ReporteGerencialPablo extends Model
         $recepcion_importada_ups = DB::table('ingresosinventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->where('Producto', 'Baterías Estacionarias Ext')
+            ->where('Producto', 'LIKE', 'Baterías Estacionarias Ext%')
             ->sum('Cantidad');
 
         // 7. Batería Nacional Automotriz

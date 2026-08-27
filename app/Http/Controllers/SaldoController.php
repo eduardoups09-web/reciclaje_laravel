@@ -18,6 +18,20 @@ class SaldoController extends Controller
         if (empty($filtros['anio'])) $filtros['anio'] = now()->year;
         if (empty($filtros['mes']))  $filtros['mes'] = now()->month;
 
+        $existe = DB::table('saldosinsert')
+            ->whereYear('fechasaldoinsert', $filtros['anio'])
+            ->whereMonth('fechasaldoinsert', $filtros['mes'])
+            ->where(function ($q) {
+                $q->where('consumo', '>', 0)
+                  ->orWhere('total_recepcion', '>', 0);
+            })
+            ->exists();
+
+        if (!$existe) {
+            $this->asegurarRegistrosMes($filtros['anio'], $filtros['mes']);
+            $this->calcularYGuardarSaldos($filtros['anio'], $filtros['mes']);
+        }
+
         $aniosDisponibles = Saldosinsert::aniosDisponibles();
 
         $registros = Saldosinsert::filtrar($filtros)
@@ -48,7 +62,41 @@ class SaldoController extends Controller
             $r->daily_maquila_recibida = $r->maquila_recibida_calc;
         });
 
-        return view('saldos.index', compact('registros', 'filtros', 'aniosDisponibles'));
+        // Cierre del mes anterior (último registro del mes anterior)
+        $anioMesAnt = $filtros['mes'] == 1 ? $filtros['anio'] - 1 : $filtros['anio'];
+        $mesAnt = $filtros['mes'] == 1 ? 12 : $filtros['mes'] - 1;
+        $cierreMesAnterior = DB::table('saldosinsert')
+            ->whereYear('fechasaldoinsert', $anioMesAnt)
+            ->whereMonth('fechasaldoinsert', $mesAnt)
+            ->orderByDesc('fechasaldoinsert')
+            ->orderByDesc('turnosaldoinsert')
+            ->first();
+
+        // Cierre del mes actual (último registro del mes filtrado)
+        $cierreMesActual = DB::table('saldosinsert')
+            ->whereYear('fechasaldoinsert', $filtros['anio'])
+            ->whereMonth('fechasaldoinsert', $filtros['mes'])
+            ->orderByDesc('fechasaldoinsert')
+            ->orderByDesc('turnosaldoinsert')
+            ->first();
+
+        // Sumas del mes actual para fila de cierre
+        $sumasMesActual = DB::table('saldosinsert')
+            ->whereYear('fechasaldoinsert', $filtros['anio'])
+            ->whereMonth('fechasaldoinsert', $filtros['mes'])
+            ->selectRaw('
+                SUM(total_recepcion) as total_recepcion,
+                SUM(recepcion_nacional_automotriz) as rec_nac_auto,
+                SUM(recepcion_nacional_ups) as rec_nac_ups,
+                SUM(recepcion_importada_automotriz) as rec_imp_auto,
+                SUM(recepcion_importada_ups) as rec_imp_ups,
+                SUM(maquila_enviada) as maquila_enviada,
+                SUM(maquila_recibida) as maquila_recibida,
+                SUM(consumo) as consumo
+            ')
+            ->first();
+
+        return view('saldos.index', compact('registros', 'filtros', 'aniosDisponibles', 'cierreMesAnterior', 'cierreMesActual', 'sumasMesActual'));
     }
 
     public function create()
@@ -59,6 +107,7 @@ class SaldoController extends Controller
     public function store(Request $request)
     {
         $data = $this->validar($request);
+        $data['gruposaldoinsert'] = $data['turnosaldoinsert'] === 'Diurno' ? '1' : '2';
         $data['created_at'] = now();
         $data['updated_at'] = now();
 
@@ -76,6 +125,7 @@ class SaldoController extends Controller
     public function update(Request $request, Saldosinsert $saldo)
     {
         $data = $this->validar($request, $saldo);
+        $data['gruposaldoinsert'] = $data['turnosaldoinsert'] === 'Diurno' ? '1' : '2';
         $data['updated_at'] = now();
         $saldo->update($data);
 
@@ -170,7 +220,7 @@ class SaldoController extends Controller
                     $aInsertar[] = [
                         'fechasaldoinsert'  => $fecha,
                         'turnosaldoinsert'  => $turno,
-                        'gruposaldoinsert'  => '1',
+                        'gruposaldoinsert'  => $turno === 'Diurno' ? '1' : '2',
                         'created_at'        => $now,
                         'updated_at'        => $now,
                     ];
@@ -297,7 +347,7 @@ class SaldoController extends Controller
                 SUM(CASE WHEN Producto IN ("Baterías Humedas Nac", "Baterias Humedas Maquila") THEN Cantidad ELSE 0 END) as rec_nac_auto,
                 SUM(CASE WHEN Producto = "Baterías Estacionarias Nac" THEN Cantidad ELSE 0 END) as rec_nac_ups,
                 SUM(CASE WHEN Producto LIKE "%Golf%" OR Producto LIKE "%Humedas Ext%" OR Producto LIKE "%Húmedas Ext%" THEN Cantidad ELSE 0 END) as rec_imp_auto,
-                SUM(CASE WHEN Producto = "Baterías Estacionarias Ext" THEN Cantidad ELSE 0 END) as rec_imp_ups,
+                SUM(CASE WHEN Producto LIKE "Baterías Estacionarias Ext%" THEN Cantidad ELSE 0 END) as rec_imp_ups,
                 SUM(Cantidad) as total_recepcion,
                 SUM(CASE WHEN Producto = "Baterías Húmedas Maquila" THEN Cantidad ELSE 0 END) as maquila_enviada
             ')->first();
@@ -446,7 +496,6 @@ class SaldoController extends Controller
         return $request->validate($reglas, [], [
             'fechasaldoinsert' => 'fecha',
             'turnosaldoinsert' => 'turno',
-            'gruposaldoinsert' => 'grupo',
         ]);
     }
 }

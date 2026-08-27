@@ -10,10 +10,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('analisiscalidad', function (Blueprint $table) {
-            $table->boolean('reactor1')->default(false)->after('filtro');
-            $table->boolean('reactor2')->default(false)->after('reactor1');
-            $table->boolean('reactor3')->default(false)->after('reactor2');
-            $table->boolean('reactor4')->default(false)->after('reactor3');
+            if (!Schema::hasColumn('analisiscalidad', 'reactor1')) {
+                $table->boolean('reactor1')->default(false)->after('filtro');
+            }
+            if (!Schema::hasColumn('analisiscalidad', 'reactor2')) {
+                $table->boolean('reactor2')->default(false)->after('reactor1');
+            }
+            if (!Schema::hasColumn('analisiscalidad', 'reactor3')) {
+                $table->boolean('reactor3')->default(false)->after('reactor2');
+            }
+            if (!Schema::hasColumn('analisiscalidad', 'reactor4')) {
+                $table->boolean('reactor4')->default(false)->after('reactor3');
+            }
         });
 
         // Migrar datos existentes del JSON a columnas booleanas

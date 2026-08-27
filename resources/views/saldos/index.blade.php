@@ -14,13 +14,6 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0"><i class="bi bi-clipboard-data text-success"></i> Saldos de inventario</h3>
     <div>
-        <form method="post" action="{{ route('saldos.autollenar') }}" class="d-inline"
-              onsubmit="return confirm('¿Auto-llenar saldos del mes? Se calcularán los saldos basados en las fórmulas.');">
-            @csrf
-            <input type="hidden" name="anio" value="{{ $filtros['anio'] }}">
-            <input type="hidden" name="mes" value="{{ $filtros['mes'] }}">
-            <button class="btn btn-warning"><i class="bi bi-calculator"></i> Auto-llenar saldos</button>
-        </form>
         <a href="{{ route('saldos.create') }}" class="btn btn-success"><i class="bi bi-plus-lg"></i> Nuevo</a>
     </div>
 </div>
@@ -55,26 +48,53 @@
 
 <div class="card shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
+        <table class="table table-bordered table-hover table-sm align-middle mb-0">
+            <thead>
                 <tr>
-                    <th>Fecha</th>
-                    <th>Turno</th>
-                    <th class="text-end text-success">Rec. Nac. Autom.</th>
-                    <th class="text-end text-success">Rec. Nac. UPS</th>
-                    <th class="text-end text-info">Rec. Imp. Autom.</th>
-                    <th class="text-end text-info">Rec. Imp. UPS</th>
-                    <th class="text-end">Total Recepción</th>
-                    <th class="text-end">Consumo</th>
-                    <th class="text-end">Maquila Enviada</th>
-                    <th class="text-end">Maquila Recibida</th>
-                    <th class="text-end">Automotriz</th>
-                    <th class="text-end">UPS</th>
-                    <th class="text-end">Saldo total</th>
-                    <th class="text-end">Acciones</th>
+                    <th style="background-color: #1e293b; color: #fff;">Fecha</th>
+                    <th style="background-color: #1e293b; color: #fff;">Turno</th>
+                    <th style="background-color: #1e293b; color: #fff;">Grupo</th>
+                    <th style="background-color: #166534; color: #fff;" class="text-end">Rec. Nac. Autom.</th>
+                    <th style="background-color: #166534; color: #fff;" class="text-end">Rec. Nac. UPS</th>
+                    <th style="background-color: #166534; color: #fff;" class="text-end">Rec. Imp. Autom.</th>
+                    <th style="background-color: #166534; color: #fff;" class="text-end">Rec. Imp. UPS</th>
+                    <th style="background-color: #166534; color: #fff;" class="text-end">Total Recepción</th>
+                    <th style="background-color: #78350f; color: #fff;" class="text-end">Maquila Enviada</th>
+                    <th style="background-color: #78350f; color: #fff;" class="text-end">Maquila Recibida</th>
+                    <th style="background-color: #7f1d1d; color: #fff;" class="text-end">Consumo</th>
+                    <th style="background-color: #155e75; color: #fff;" class="text-end">Automotriz</th>
+                    <th style="background-color: #155e75; color: #fff;" class="text-end">UPS</th>
+                    <th style="background-color: #155e75; color: #fff;" class="text-end">Saldo total</th>
+                    <th style="background-color: #1e3a5f; color: #fff;" class="text-end">Acciones</th>
                 </tr>
             </thead>
             <tbody>
+                @if($cierreMesAnterior)
+                <tr class="table-warning">
+                    <td colspan="11"></td>
+                    <td class="text-end {{ $cierreMesAnterior->saldototalinsertAutomotriz < 0 ? 'text-danger' : '' }}">{{ number_format($cierreMesAnterior->saldototalinsertAutomotriz) }}</td>
+                    <td class="text-end {{ $cierreMesAnterior->saldototalinsertUPS < 0 ? 'text-danger' : '' }}">{{ number_format($cierreMesAnterior->saldototalinsertUPS) }}</td>
+                    <td class="text-end {{ $cierreMesAnterior->saldototalinsert < 0 ? 'text-danger' : '' }}">{{ number_format($cierreMesAnterior->saldototalinsert) }}</td>
+                    <td class="text-center text-muted small fw-bold">Cierre mes anterior</td>
+                </tr>
+                @endif
+                @if($cierreMesActual)
+                <tr class="table-warning">
+                    <td colspan="3"></td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->rec_nac_auto ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->rec_nac_ups ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->rec_imp_auto ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->rec_imp_ups ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->total_recepcion ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->maquila_enviada ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->maquila_recibida ?? 0, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($sumasMesActual->consumo ?? 0, 2) }}</td>
+                    <td class="text-end {{ $cierreMesActual->saldototalinsertAutomotriz < 0 ? 'text-danger' : '' }}">{{ number_format($cierreMesActual->saldototalinsertAutomotriz) }}</td>
+                    <td class="text-end {{ $cierreMesActual->saldototalinsertUPS < 0 ? 'text-danger' : '' }}">{{ number_format($cierreMesActual->saldototalinsertUPS) }}</td>
+                    <td class="text-end {{ $cierreMesActual->saldototalinsert < 0 ? 'text-danger' : '' }}">{{ number_format($cierreMesActual->saldototalinsert) }}</td>
+                    <td class="text-center text-muted small fw-bold">Cierre mes actual</td>
+                </tr>
+                @endif
             @forelse ($registros as $r)
                 @php
                     // Valores diarios para back-calculation (iguales a los del controller)
@@ -101,14 +121,15 @@
                 <tr>
                     <td>{{ $r->fechasaldoinsert }}</td>
                     <td>{{ $r->turnosaldoinsert }}</td>
+                    <td>{{ $r->gruposaldoinsert }}</td>
                     <td class="text-end text-success">{{ number_format($r->rec_nac_auto, 2) }}</td>
                     <td class="text-end text-success">{{ number_format($r->rec_nac_ups, 2) }}</td>
                     <td class="text-end text-info">{{ number_format($r->rec_imp_auto, 2) }}</td>
                     <td class="text-end text-info">{{ number_format($r->rec_imp_ups, 2) }}</td>
                     <td class="text-end">{{ number_format($r->total_recepcion_calc, 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($r->consumo_calc, 2) }}</td>
                     <td class="text-end">{{ number_format($r->maquila_enviada_calc, 2) }}</td>
                     <td class="text-end">{{ number_format($r->maquila_recibida_calc, 2) }}</td>
+                    <td class="text-end fw-bold">{{ number_format($r->consumo_calc, 2) }}</td>
                     <td class="text-end {{ $r->saldototalinsertAutomotriz < 0 ? 'text-danger' : '' }}">{{ number_format($r->saldototalinsertAutomotriz) }}</td>
                     <td class="text-end {{ $r->saldototalinsertUPS < 0 ? 'text-danger' : '' }}">{{ number_format($r->saldototalinsertUPS) }}</td>
                     <td class="text-end {{ $r->saldototalinsert < 0 ? 'text-danger' : '' }}">{{ number_format($r->saldototalinsert) }}</td>
@@ -148,7 +169,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="14" class="text-center text-muted py-4">Sin registros.</td></tr>
+                <tr><td colspan="15" class="text-center text-muted py-4">Sin registros.</td></tr>
             @endforelse
             </tbody>
         </table>
