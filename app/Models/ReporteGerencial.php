@@ -47,8 +47,8 @@ class ReporteGerencial extends Model
             ->first();
         $saldo_total = $saldo->cantidadsaldo ?? 0;
 
-        // 2. Total recepción: suma Cantidad de ingresosinventarios del mes
-        $total_recepcion = DB::table('ingresosinventarios')
+        // 2. Total recepción: suma Cantidad de ingresosInventarios del mes
+        $total_recepcion = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->sum('Cantidad');
@@ -67,7 +67,7 @@ class ReporteGerencial extends Model
         $consumo = $consumoNacional + $consumoImport;
 
         // 4. Maquila enviada: suma Cantidad donde Producto='Baterías Húmedas Maquila'
-        $maquila_enviada = DB::table('ingresosinventarios')
+        $maquila_enviada = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->where('Producto', 'Baterías Húmedas Maquila')

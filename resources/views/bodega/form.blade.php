@@ -83,7 +83,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Transportista</label>
-                <select name="nombreTransportista" class="form-select">
+                <select name="nombreTransportista" id="nombreTransportista" class="form-select">
                     <option value="">Seleccionar…</option>
                     @foreach ($transportistas as $t)
                         <option value="{{ $t }}" @selected(old('nombreTransportista', $bodega->nombreTransportista) === $t)>{{ $t }}</option>
@@ -157,6 +157,35 @@
 
     fechaInput.addEventListener('change', obtenerConsecutivo);
     despachoInput.addEventListener('change', obtenerConsecutivo);
+})();
+</script>
+
+@push('scripts')
+<script>
+(function() {
+    // Auto-cargar RUC y Placa al seleccionar transportista
+    function initTransportistaAutoload() {
+        const select = document.getElementById('nombreTransportista');
+        if (!select) return;
+        select.addEventListener('change', function() {
+            const nombre = this.value;
+            if (!nombre) return;
+            fetch(`/transportistas/obtener?nombre=${encodeURIComponent(nombre)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const ruc = document.querySelector('[name="transportistaRuc"]');
+                const placa = document.querySelector('[name="placaTransportista"]');
+                if (ruc) ruc.value = data.ruc || '';
+                if (placa) placa.value = data.placa || '';
+            });
+        });
+    }
+
+    initTransportistaAutoload();
 })();
 </script>
 @endpush

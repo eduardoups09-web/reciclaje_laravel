@@ -60,6 +60,10 @@ class BodegaController extends Controller
             ->paginate(25)
             ->withQueryString();
 
+        if ($request->ajax()) {
+            return view('bodega._tabla', compact('registros', 'despachos'));
+        }
+
         return view('bodega.index', compact('registros', 'filtros', 'unidades', 'transportistas', 'motivos', 'despachos'));
     }
 

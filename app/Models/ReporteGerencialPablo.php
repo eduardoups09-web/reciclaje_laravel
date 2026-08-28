@@ -53,34 +53,34 @@ class ReporteGerencialPablo extends Model
         $saldo_total = $saldo->cantidadsaldo ?? 0;
 
         // 2. Total recepción
-        $total_recepcion = DB::table('ingresosinventarios')
+        $total_recepcion = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->sum('Cantidad');
 
         // 3. Recepción Nacional Automotriz
-        $recepcion_nacional_automotriz = DB::table('ingresosinventarios')
+        $recepcion_nacional_automotriz = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->whereIn('Producto', ['Baterías Humedas Nac', 'Baterias Humedas Maquila'])
             ->sum('Cantidad');
 
         // 4. Recepción Nacional UPS
-        $recepcion_nacional_ups = DB::table('ingresosinventarios')
+        $recepcion_nacional_ups = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->where('Producto', 'Baterías Estacionarias Nac')
             ->sum('Cantidad');
 
         // 5. Recepción Importado Automotriz
-        $recepcion_importada_automotriz = DB::table('ingresosinventarios')
+        $recepcion_importada_automotriz = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->whereIn('Producto', ['Baterias de Golf', 'Baterías Humedas Ext'])
             ->sum('Cantidad');
 
         // 6. Recepción Importado UPS
-        $recepcion_importada_ups = DB::table('ingresosinventarios')
+        $recepcion_importada_ups = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->where('Producto', 'LIKE', 'Baterías Estacionarias Ext%')
@@ -123,7 +123,7 @@ class ReporteGerencialPablo extends Model
                  + $bateria_importada_automotriz + $bateria_importada_ups;
 
         // 12. Maquila enviada
-        $maquila_enviada = DB::table('ingresosinventarios')
+        $maquila_enviada = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
             ->where('Producto', 'Baterías Húmedas Maquila')

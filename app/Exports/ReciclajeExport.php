@@ -228,21 +228,21 @@ class ReciclajeExport
             ) c ON c.fecha = md.fecha AND c.turnocalidad = md.turno
             LEFT JOIN (
                 SELECT FechaDet, SUM(Cantidad) AS cantidad_total
-                FROM ingresosinventarios
+                FROM ingresosInventarios
                 WHERE Tipo = 'IBA' AND Procedencia <> 'EXTRANJERA'
                   AND FechaDet >= ? AND FechaDet < ?
                 GROUP BY FechaDet
             ) ing_nac ON ing_nac.FechaDet = md.fecha
             LEFT JOIN (
                 SELECT FechaDet, SUM(Cantidad) AS cantidad_total
-                FROM ingresosinventarios
+                FROM ingresosInventarios
                 WHERE Tipo = 'IBA' AND Procedencia = 'EXTRANJERA'
                   AND FechaDet >= ? AND FechaDet < ?
                 GROUP BY FechaDet
             ) ing_ext ON ing_ext.FechaDet = md.fecha
             LEFT JOIN (
                 SELECT FechaDet, SUM(Cantidad) AS cantidad_total
-                FROM ingresosinventarios
+                FROM ingresosInventarios
                 WHERE Tipo = 'IBA' AND Procedencia <> 'EXTRANJERA'
                   AND Producto IN ('Baterias Humedas Maquila','Baterias Estacionarias Maquila')
                   AND FechaDet >= ? AND FechaDet < ?

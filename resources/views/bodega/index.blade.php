@@ -6,7 +6,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">Bodega · Despachos</h3>
-    <button onclick="abrirModalBodegaCrear()" class="btn btn-success">+ Nuevo</button>
+    <div>
+        <button onclick="abrirModalBodegaCrear()" class="btn btn-success me-2">+ Nuevo</button>
+        <button onclick="abrirModalTransportista()" class="btn btn-outline-success">Transportistas</button>
+    </div>
 </div>
 
 {{-- Filtros --}}
@@ -60,60 +63,9 @@
 </div>
 @endif
 
-<div class="text-muted small mb-2">{{ number_format($registros->total()) }} registro(s) encontrados.</div>
-
-<div class="card shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Fecha Inicio</th><th>Fecha Entrega</th><th>Despacho</th><th>Tipo</th><th>Contenedor</th>
-                    <th class="text-end">Cantidad</th><th>Unidad</th>
-                    <th>Consec.</th><th>Destinatario</th><th>RUC Dest.</th><th>Llegada</th>
-                    <th>Transportista</th><th>RUC Trans.</th><th>Placa</th>
-                    <th>Observación</th><th>Motivo</th><th>Partida</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-            @forelse ($registros as $r)
-                <tr>
-                    <td>{{ $r->fechainicio }}</td>
-                    <td>{{ $r->fechaemision }}</td>
-                    <td>{{ $r->despacho }}</td>
-                    <td class="small">{{ $r->tipobateria }}</td>
-                    <td>{{ $r->contenedor }}</td>
-                    <td class="text-end">{{ $r->cantidad }}</td>
-                    <td>{{ $r->unidad }}</td>
-                    <td>{{ $r->consecutivo }}</td>
-                    <td class="small">{{ $r->nombreDestinatario }}</td>
-                    <td class="small">{{ $r->rucDestinatario }}</td>
-                    <td>{{ $r->llegada }}</td>
-                    <td class="small text-muted">{{ $r->nombreTransportista }}</td>
-                    <td class="small">{{ $r->rucTransportista }}</td>
-                    <td class="small">{{ $r->placaTransportista }}</td>
-                    <td class="small">{{ $r->observacion }}</td>
-                    <td class="small">{{ $r->motivo }}</td>
-                    <td class="small">{{ $r->partida }}</td>
-                    <td class="text-end text-nowrap">
-                        <a href="{{ route('bodega.edit', $r) }}" class="btn btn-sm btn-outline-primary">Editar</a>
-                        <form method="post" action="{{ route('bodega.destroy', $r) }}" class="d-inline"
-                              onsubmit="return confirm('¿Eliminar este registro?');">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger">Eliminar</button>
-                        </form>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="18" class="text-center text-muted py-4">Sin registros.</td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
+<div id="tablaRegistros">
+    @include('bodega._tabla')
 </div>
-
-<div class="mt-3">{{ $registros->links('pagination::bootstrap-5') }}</div>
 
 {{-- Modal Nuevo/Editar Movimiento Bodega --}}
 <div class="modal fade" id="modalBodega" tabindex="-1" aria-labelledby="modalBodegaLabel" aria-hidden="true">
@@ -135,6 +87,64 @@
                 <button type="button" class="btn btn-success" id="btnGuardarBodega">
                     Guardar
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Gestión de Transportistas --}}
+<div class="modal fade" id="modalTransportista" tabindex="-1" aria-labelledby="modalTransportistaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalTransportistaLabel">Gestión de Transportistas</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formTransportista" method="post" action="{{ route('transportistas.store') }}">
+                    @csrf
+                    <input type="hidden" name="id" id="transportistaId">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label">Razón Social <span class="text-danger">*</span></label>
+                            <input type="text" name="transportistas" id="transportistaNombre" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">RUC</label>
+                            <input type="text" name="ruc" id="transportistaRuc" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Placa</label>
+                            <input type="text" name="placa" id="transportistaPlaca" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mt-2 d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-success" id="btnGuardarTransportista">Guardar</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="reiniciarFormTransportista()">Limpiar</button>
+                        <span id="transportistaModo" class="badge bg-info text-dark ms-2 d-none">Editando</span>
+                    </div>
+                </form>
+
+                <hr>
+
+                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Razón Social</th>
+                                <th>RUC</th>
+                                <th>Placa</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTransportistas">
+                            <tr><td colspan="4" class="text-center text-muted py-3">Cargando…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -167,7 +177,7 @@
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
             .then(res => res.text())
-            .then(html => { modalBody.innerHTML = html; initConsecutivo(); })
+            .then(html => { modalBody.innerHTML = html; initConsecutivo(); initTransportistaAutoload(); })
             .catch(() => { modalBody.innerHTML = '<div class="alert alert-danger">Error al cargar el formulario.</div>'; });
     }
 
@@ -204,6 +214,7 @@
             const data = await res.json();
             if (data.success) {
                 mostrarExito(data.message);
+                refrescarTabla();
             } else {
                 mostrarErrores(data.errors || {});
             }
@@ -239,6 +250,21 @@
         div.className = 'alert alert-success alert-dismissible fade show mt-2';
         div.innerHTML = mensaje + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
         modalBody.prepend(div);
+    }
+
+    function refrescarTabla() {
+        const cont = document.getElementById('tablaRegistros');
+        if (!cont) return;
+
+        const url = window.location.pathname + window.location.search;
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+        .then(r => r.text())
+        .then(html => { cont.innerHTML = html; })
+        .catch(() => {});
     }
     function initConsecutivo() {
         const form = document.getElementById('formBodega');
@@ -298,6 +324,245 @@
             }
         });
     }
+
+    function initTransportistaAutoload() {
+        const select = document.getElementById('nombreTransportista');
+        if (!select) return;
+        select.addEventListener('change', function() {
+            const nombre = this.value;
+            if (!nombre) return;
+            fetch(`/transportistas/obtener?nombre=${encodeURIComponent(nombre)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const ruc = document.querySelector('[name="transportistaRuc"]');
+                const placa = document.querySelector('[name="placaTransportista"]');
+                if (ruc) ruc.value = data.ruc || '';
+                if (placa) placa.value = data.placa || '';
+            });
+        });
+    }
+
+    let modoEdicionTransportista = false;
+
+    function cargarTransportistas() {
+        fetch('/transportistas/listar', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+        .then(r => r.json())
+        .then(data => {
+            const tbody = document.getElementById('tablaTransportistas');
+            tbody.innerHTML = '';
+
+            if (!data.success || !data.items.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Sin transportistas registrados.</td></tr>';
+                return;
+            }
+
+            data.items.forEach(t => {
+                const tr = document.createElement('tr');
+
+                const td1 = document.createElement('td');
+                td1.textContent = t.transportistas;
+                tr.appendChild(td1);
+
+                const td2 = document.createElement('td');
+                td2.textContent = t.ruc || '';
+                tr.appendChild(td2);
+
+                const td3 = document.createElement('td');
+                td3.textContent = t.placa || '';
+                tr.appendChild(td3);
+
+                const td4 = document.createElement('td');
+                td4.className = 'text-end text-nowrap';
+
+                const btnEdit = document.createElement('button');
+                btnEdit.type = 'button';
+                btnEdit.className = 'btn btn-sm btn-outline-primary';
+                btnEdit.textContent = 'Editar';
+                btnEdit.addEventListener('click', () => editarTransportista(t.id, t.transportistas, t.ruc || '', t.placa || ''));
+
+                const btnDel = document.createElement('button');
+                btnDel.type = 'button';
+                btnDel.className = 'btn btn-sm btn-outline-danger';
+                btnDel.textContent = 'Eliminar';
+                btnDel.addEventListener('click', () => eliminarTransportista(t.id));
+
+                td4.appendChild(btnEdit);
+                td4.appendChild(document.createTextNode(' '));
+                td4.appendChild(btnDel);
+                tr.appendChild(td4);
+
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(() => {
+            document.getElementById('tablaTransportistas').innerHTML =
+                '<tr><td colspan="4" class="text-center text-danger py-3">Error al cargar.</td></tr>';
+        });
+    }
+
+    function refrescarSelectsTransportista() {
+        fetch('/transportistas/listar', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            document.querySelectorAll('#nombreTransportista').forEach(sel => {
+                const actual = sel.value;
+                sel.innerHTML = '';
+                const opt0 = document.createElement('option');
+                opt0.value = '';
+                opt0.textContent = 'Seleccionar…';
+                sel.appendChild(opt0);
+                data.items.forEach(t => {
+                    const o = document.createElement('option');
+                    o.value = t.transportistas;
+                    o.textContent = t.transportistas;
+                    sel.appendChild(o);
+                });
+                sel.value = actual;
+            });
+        })
+        .catch(() => {});
+    }
+
+    function reiniciarFormTransportista() {
+        modoEdicionTransportista = false;
+        const form = document.getElementById('formTransportista');
+        form.reset();
+        document.getElementById('transportistaId').value = '';
+        document.getElementById('transportistaModo').classList.add('d-none');
+        document.getElementById('btnGuardarTransportista').textContent = 'Guardar';
+    }
+
+    function tokenCsrfActual() {
+        return document.querySelector('meta[name="csrf-token"]')?.content
+            || document.querySelector('#formTransportista input[name="_token"]')?.value
+            || '';
+    }
+
+    function refrescarTokenCsrf() {
+        return fetch('/csrf-token', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        })
+        .then(r => r.json())
+        .then(data => {
+            const t = data.token;
+            const input = document.querySelector('#formTransportista input[name="_token"]');
+            if (input) input.value = t;
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) meta.setAttribute('content', t);
+            return t;
+        })
+        .catch(() => tokenCsrfActual());
+    }
+
+    async function enviarTransportista(url, method, formData) {
+        // Laravel/HTTP: PHP solo llena $_POST en POST, así que para PUT/DELETE
+        // usamos spoofing de método (POST + _method) para que el body llegue.
+        formData.append('_method', method);
+        const token = await refrescarTokenCsrf();
+        const headers = {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': token
+        };
+        let res = await fetch(url, { method: 'POST', body: formData, headers, credentials: 'same-origin' });
+        if (res.status === 419) {
+            const token2 = await refrescarTokenCsrf();
+            headers['X-CSRF-TOKEN'] = token2;
+            res = await fetch(url, { method: 'POST', body: formData, headers, credentials: 'same-origin' });
+        }
+        return res;
+    }
+
+    window.editarTransportista = function(id, nombre, ruc, placa) {
+        modoEdicionTransportista = true;
+        document.getElementById('transportistaId').value = id;
+        document.getElementById('transportistaNombre').value = nombre;
+        document.getElementById('transportistaRuc').value = ruc;
+        document.getElementById('transportistaPlaca').value = placa;
+        document.getElementById('transportistaModo').classList.remove('d-none');
+        document.getElementById('btnGuardarTransportista').textContent = 'Actualizar';
+        document.getElementById('transportistaNombre').focus();
+    };
+
+    window.eliminarTransportista = async function(id) {
+        if (!confirm('¿Eliminar este transportista?')) return;
+        const token = await refrescarTokenCsrf();
+        const headers = {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': token
+        };
+        const fd = new FormData();
+        fd.append('_method', 'DELETE');
+        let res = await fetch(`/transportistas/${id}`, { method: 'POST', body: fd, headers, credentials: 'same-origin' });
+        if (res.status === 419) {
+            headers['X-CSRF-TOKEN'] = await refrescarTokenCsrf();
+            res = await fetch(`/transportistas/${id}`, { method: 'POST', body: fd, headers, credentials: 'same-origin' });
+        }
+        res.json().then(data => {
+            if (data.success) {
+                cargarTransportistas();
+                refrescarSelectsTransportista();
+            } else {
+                alert('No se pudo eliminar.');
+            }
+        }).catch(() => alert('Error al eliminar.'));
+    };
+
+    window.abrirModalTransportista = async function() {
+        await refrescarTokenCsrf();
+        reiniciarFormTransportista();
+        cargarTransportistas();
+        const modal = new bootstrap.Modal(document.getElementById('modalTransportista'));
+        modal.show();
+    };
+
+    (function initFormTransportista() {
+        const formTrans = document.getElementById('formTransportista');
+        if (!formTrans) return;
+        const btn = document.getElementById('btnGuardarTransportista');
+
+        formTrans.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('transportistaId').value;
+            const url = (modoEdicionTransportista && id) ? `/transportistas/${id}` : formTrans.action;
+            const method = (modoEdicionTransportista && id) ? 'PUT' : 'POST';
+
+            const formData = new FormData(formTrans);
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+
+            enviarTransportista(url, method, formData)
+            .then(async res => res.json())
+            .then(data => {
+                if (data.success) {
+                    reiniciarFormTransportista();
+                    cargarTransportistas();
+                    refrescarSelectsTransportista();
+                } else {
+                    alert(data.message || 'No se pudo guardar el transportista.');
+                }
+            })
+            .catch(() => alert('Error al guardar el transportista.'))
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = modoEdicionTransportista ? 'Actualizar' : 'Guardar';
+            });
+        });
+    })();
 
 })();
 </script>

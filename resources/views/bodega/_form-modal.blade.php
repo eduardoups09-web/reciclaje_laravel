@@ -123,7 +123,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Razón Social</label>
-                    <select name="nombreTransportista" class="form-select">
+                    <select name="nombreTransportista" id="nombreTransportista" class="form-select">
                         <option value="">Seleccionar…</option>
                         @foreach ($transportistas as $t)
                             <option value="{{ $t }}" @selected(old('nombreTransportista', $bodega->nombreTransportista) === $t)>{{ $t }}</option>

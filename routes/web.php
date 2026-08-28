@@ -15,6 +15,7 @@ use App\Http\Controllers\ReporteGerencialController;
 use App\Http\Controllers\ReporteGerencialPabloController;
 use App\Http\Controllers\ReporteReciclajeController;
 use App\Http\Controllers\SaldoController;
+use App\Http\Controllers\TransportistaController;
 use Illuminate\Support\Facades\Route;
 
 // --- Autenticación ---
@@ -52,6 +53,16 @@ Route::middleware('auth')->group(function () {
     Route::resource('bodega', BodegaController::class)
         ->parameters(['bodega' => 'bodega'])
         ->except(['show']);
+
+    // Transportistas (registro, consulta y gestión AJAX)
+    Route::get('/transportistas/listar', [TransportistaController::class, 'listar'])->name('transportistas.listar');
+    Route::get('/transportistas/obtener', [TransportistaController::class, 'obtener'])->name('transportistas.obtener');
+    Route::post('/transportistas', [TransportistaController::class, 'store'])->name('transportistas.store');
+    Route::put('/transportistas/{transportista}', [TransportistaController::class, 'update'])->name('transportistas.update');
+    Route::delete('/transportistas/{transportista}', [TransportistaController::class, 'destroy'])->name('transportistas.destroy');
+
+    // Token CSRF fresco para peticiones AJAX de larga duración (evita 419)
+    Route::get('/csrf-token', fn () => response()->json(['token' => csrf_token()]));
 
     // Saldos de inventario
     Route::resource('saldos', SaldoController::class)

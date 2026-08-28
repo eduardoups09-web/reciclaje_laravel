@@ -8,6 +8,10 @@ return new class extends Migration
 {
     private function addIndexIfNotExists(string $table, array $columns, ?string $name = null): void
     {
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+
         $indexName = $name ?? implode('_', $columns) . '_index';
         $exists = DB::select("SHOW INDEX FROM `{$table}` WHERE Key_name = ?", [$indexName]);
         if (empty($exists)) {
@@ -16,11 +20,20 @@ return new class extends Migration
         }
     }
 
+    private function dropIndexIfExists(string $table, string $index): void
+    {
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+
+        DB::statement("DROP INDEX IF EXISTS `{$index}` ON `{$table}`");
+    }
+
     public function up(): void
     {
-        $this->addIndexIfNotExists('ingresosinventarios', ['FechaCab']);
-        $this->addIndexIfNotExists('ingresosinventarios', ['Producto']);
-        $this->addIndexIfNotExists('ingresosinventarios', ['FechaCab', 'Producto'], 'ingresos_fechaproducto_idx');
+        $this->addIndexIfNotExists('ingresosInventarios', ['FechaCab']);
+        $this->addIndexIfNotExists('ingresosInventarios', ['Producto']);
+        $this->addIndexIfNotExists('ingresosInventarios', ['FechaCab', 'Producto'], 'ingresos_fechaproducto_idx');
 
         $this->addIndexIfNotExists('bodega', ['fechainicio']);
         $this->addIndexIfNotExists('bodega', ['is_deleted']);
@@ -40,23 +53,23 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement("DROP INDEX IF EXISTS `ingresosinventarios_fechacab_index` ON `ingresosinventarios`");
-        DB::statement("DROP INDEX IF EXISTS `ingresosinventarios_producto_index` ON `ingresosinventarios`");
-        DB::statement("DROP INDEX IF EXISTS `ingresos_fechaproducto_idx` ON `ingresosinventarios`");
+        $this->dropIndexIfExists('ingresosInventarios', 'ingresosInventarios_fechacab_index');
+        $this->dropIndexIfExists('ingresosInventarios', 'ingresosInventarios_producto_index');
+        $this->dropIndexIfExists('ingresosInventarios', 'ingresos_fechaproducto_idx');
 
-        DB::statement("DROP INDEX IF EXISTS `bodega_fechainicio_index` ON `bodega`");
-        DB::statement("DROP INDEX IF EXISTS `bodega_is_deleted_index` ON `bodega`");
-        DB::statement("DROP INDEX IF EXISTS `bodega_del_fecha_idx` ON `bodega`");
+        $this->dropIndexIfExists('bodega', 'bodega_fechainicio_index');
+        $this->dropIndexIfExists('bodega', 'bodega_is_deleted_index');
+        $this->dropIndexIfExists('bodega', 'bodega_del_fecha_idx');
 
-        DB::statement("DROP INDEX IF EXISTS `mpnacional_fechanacional_index` ON `mpnacional`");
-        DB::statement("DROP INDEX IF EXISTS `mpnacional_is_deleted_index` ON `mpnacional`");
-        DB::statement("DROP INDEX IF EXISTS `mpnac_idx_comp` ON `mpnacional`");
+        $this->dropIndexIfExists('mpnacional', 'mpnacional_fechanacional_index');
+        $this->dropIndexIfExists('mpnacional', 'mpnacional_is_deleted_index');
+        $this->dropIndexIfExists('mpnacional', 'mpnac_idx_comp');
 
-        DB::statement("DROP INDEX IF EXISTS `mpimport_fechaimport_index` ON `mpimport`");
-        DB::statement("DROP INDEX IF EXISTS `mpimport_is_deleted_index` ON `mpimport`");
-        DB::statement("DROP INDEX IF EXISTS `mpimp_idx_comp` ON `mpimport`");
+        $this->dropIndexIfExists('mpimport', 'mpimport_fechaimport_index');
+        $this->dropIndexIfExists('mpimport', 'mpimport_is_deleted_index');
+        $this->dropIndexIfExists('mpimport', 'mpimp_idx_comp');
 
-        DB::statement("DROP INDEX IF EXISTS `saldosinsert_fechasaldoinsert_index` ON `saldosinsert`");
-        DB::statement("DROP INDEX IF EXISTS `saldos_fecha_turno_idx` ON `saldosinsert`");
+        $this->dropIndexIfExists('saldosinsert', 'saldosinsert_fechasaldoinsert_index');
+        $this->dropIndexIfExists('saldosinsert', 'saldos_fecha_turno_idx');
     }
 };

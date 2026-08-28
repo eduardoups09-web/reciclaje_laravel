@@ -340,7 +340,7 @@ class SaldoController extends Controller
     {
         $fechaSiguiente = date('Y-m-d', strtotime($fecha . ' +1 day'));
 
-        $ingresos = DB::table('ingresosinventarios')
+        $ingresos = DB::table('ingresosInventarios')
             ->where('FechaCab', '>=', $fecha . ' 00:00:00')
             ->where('FechaCab', '<', $fechaSiguiente . ' 00:00:00')
             ->selectRaw('
