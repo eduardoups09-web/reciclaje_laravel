@@ -186,45 +186,44 @@ class SaldoController extends Controller
      */
     private function asegurarRegistrosMes(int $anio, int $mes): void
     {
-        $conteoRegistros = Saldosinsert::whereYear('fechasaldoinsert', $anio)
-            ->whereMonth('fechasaldoinsert', $mes)
-            ->count();
+        $now = now();
 
-        $diasMes = Carbon::create($anio, $mes, 1)->daysInMonth;
-        $esperados = $diasMes * count(Saldosinsert::TURNOS);
+        $fechasMov = DB::table('movimientodetalle')
+            ->where('is_deleted', 0)
+            ->whereYear('fecha', $anio)
+            ->whereMonth('fecha', $mes)
+            ->selectRaw('DISTINCT fecha, turno')
+            ->get()
+            ->keyBy(fn($r) => $r->fecha . '|' . $r->turno);
 
-        if ($conteoRegistros > $esperados) {
-            Saldosinsert::whereYear('fechasaldoinsert', $anio)
+        $clavesValidas = $fechasMov->keys()->toArray();
+
+        if (!empty($clavesValidas)) {
+            DB::table('saldosinsert')
+                ->whereYear('fechasaldoinsert', $anio)
                 ->whereMonth('fechasaldoinsert', $mes)
+                ->whereNotIn(
+                    DB::raw("CONCAT(fechasaldoinsert, '|', turnosaldoinsert)"),
+                    $clavesValidas
+                )
                 ->delete();
         }
 
-        $existentes = Saldosinsert::whereYear('fechasaldoinsert', $anio)
-            ->whereMonth('fechasaldoinsert', $mes)
-            ->select('fechasaldoinsert', 'turnosaldoinsert')
-            ->get()
-            ->map(fn($r) => $r->fechasaldoinsert . '|' . $r->turnosaldoinsert)
-            ->flip()
-            ->toArray();
-
         $aInsertar = [];
-        $now = now();
+        foreach ($fechasMov as $fm) {
+            $existe = DB::table('saldosinsert')
+                ->where('fechasaldoinsert', $fm->fecha)
+                ->where('turnosaldoinsert', $fm->turno)
+                ->exists();
 
-        for ($dia = 1; $dia <= $diasMes; $dia++) {
-            $fecha = Carbon::create($anio, $mes, $dia)->toDateString();
-
-            foreach (Saldosinsert::TURNOS as $turno) {
-                $key = $fecha . '|' . $turno;
-
-                if (!isset($existentes[$key])) {
-                    $aInsertar[] = [
-                        'fechasaldoinsert'  => $fecha,
-                        'turnosaldoinsert'  => $turno,
-                        'gruposaldoinsert'  => $turno === 'Diurno' ? '1' : '2',
-                        'created_at'        => $now,
-                        'updated_at'        => $now,
-                    ];
-                }
+            if (!$existe) {
+                $aInsertar[] = [
+                    'fechasaldoinsert'  => $fm->fecha,
+                    'turnosaldoinsert'  => $fm->turno,
+                    'gruposaldoinsert'  => $fm->turno === 'Diurno' ? '1' : '2',
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
+                ];
             }
         }
 

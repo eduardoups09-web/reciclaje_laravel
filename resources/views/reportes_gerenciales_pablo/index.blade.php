@@ -8,6 +8,15 @@
     .sec1, .sec2, .sec3 { display: none; }
     .sec1.active, .sec2.active, .sec3.active { display: table-cell; }
     .btn-toggle { font-size: 0.8rem; }
+
+    #tablaPablo th, #tablaPablo td { border: 1px solid #adb5bd !important; }
+    #tablaPablo .num { color: #000 !important; font-weight: 700 !important; }
+    #tablaPablo .bg-sec1 { background-color: #d4edda !important; }
+    #tablaPablo .bg-sec2 { background-color: #cce5ff !important; }
+    #tablaPablo .bg-sec3 { background-color: #fff3cd !important; }
+    #tablaPablo .bg-mes { background-color: #e2e3e5 !important; }
+    #tablaPablo .bg-saldo { background-color: #f8f9fa !important; }
+    #tablaPablo .bg-total { background-color: #ffeeba !important; }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -46,27 +55,27 @@
 
 <div class="card shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
+        <table id="tablaPablo" class="table table-hover table-sm align-middle mb-0">
+            <thead>
                 <tr>
-                    <th>Mes</th>
-                    <th class="text-end text-success sec1">Rec. Nac. Autom.</th>
-                    <th class="text-end text-success sec1">Rec. Nac. UPS</th>
-                    <th class="text-end text-info sec1">Rec. Imp. Autom.</th>
-                    <th class="text-end text-info sec1">Rec. Imp. UPS</th>
-                    <th class="text-end">Total Recepción</th>
-                    <th class="text-end text-primary sec2">Nac. Automotriz</th>
-                    <th class="text-end text-primary sec2">Nac. UPS</th>
-                    <th class="text-end text-warning sec2">Imp. Automotriz</th>
-                    <th class="text-end text-warning sec2">Imp. UPS</th>
-                    <th class="text-end">Consumo</th>
-                    <th class="text-end sec3">Maquila Enviada</th>
-                    <th class="text-end sec3">Maquila Recibida</th>
-                    <th class="text-end">Total Maquila</th>
-                    <th class="text-end">Saldo Inicial</th>
-                    <th class="text-end text-dark">S. Cierre Autom.</th>
-                    <th class="text-end text-dark">S. Cierre UPS</th>
-                    <th class="text-end">Saldo Cierre</th>
+                    <th class="bg-mes">Mes</th>
+                    <th class="text-end sec1 bg-sec1">Rec. Nac. Autom.</th>
+                    <th class="text-end sec1 bg-sec1">Rec. Nac. UPS</th>
+                    <th class="text-end sec1 bg-sec1">Rec. Imp. Autom.</th>
+                    <th class="text-end sec1 bg-sec1">Rec. Imp. UPS</th>
+                    <th class="text-end bg-sec1">Total Recepción</th>
+                    <th class="text-end sec2 bg-sec2">Nac. Automotriz</th>
+                    <th class="text-end sec2 bg-sec2">Nac. UPS</th>
+                    <th class="text-end sec2 bg-sec2">Imp. Automotriz</th>
+                    <th class="text-end sec2 bg-sec2">Imp. UPS</th>
+                    <th class="text-end bg-sec2">Consumo</th>
+                    <th class="text-end sec3 bg-sec3">Maquila Enviada</th>
+                    <th class="text-end sec3 bg-sec3">Maquila Recibida</th>
+                    <th class="text-end bg-sec3">Total Maquila</th>
+                    <th class="text-end bg-saldo">Saldo Inicial</th>
+                    <th class="text-end bg-saldo">S. Cierre Autom.</th>
+                    <th class="text-end bg-saldo">S. Cierre UPS</th>
+                    <th class="text-end bg-saldo">Saldo Cierre</th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
@@ -105,30 +114,24 @@
                     $totales['saldo_cierre']                   += $r->saldo_cierre;
                 @endphp
                 <tr>
-                    <td class="fw-semibold">{{ ReporteGerencialPablo::MESES[$r->mes] ?? $r->mes }}</td>
-                    <td class="text-end text-success sec1">{{ number_format($r->recepcion_nacional_automotriz, 2) }}</td>
-                    <td class="text-end text-success sec1">{{ number_format($r->recepcion_nacional_ups, 2) }}</td>
-                    <td class="text-end text-info sec1">{{ number_format($r->recepcion_importada_automotriz, 2) }}</td>
-                    <td class="text-end text-info sec1">{{ number_format($r->recepcion_importada_ups, 2) }}</td>
-                    <td class="text-end">{{ number_format($r->total_recepcion, 2) }}</td>
-                    <td class="text-end text-primary sec2">{{ number_format($r->bateria_nacional_automotriz, 2) }}</td>
-                    <td class="text-end text-primary sec2">{{ number_format($r->bateria_nacional_ups, 2) }}</td>
-                    <td class="text-end text-warning sec2">{{ number_format($r->bateria_importada_automotriz, 2) }}</td>
-                    <td class="text-end text-warning sec2">{{ number_format($r->bateria_importada_ups, 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($r->consumo, 2) }}</td>
-                    <td class="text-end text-warning sec3">{{ number_format($r->maquila_enviada, 2) }}</td>
-                    <td class="text-end text-info sec3">{{ number_format($r->maquila_recibida, 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($r->total_maquila, 2) }}</td>
-                    <td class="text-end">{{ number_format($r->saldo_total, 2) }}</td>
-                    <td class="text-end fw-bold {{ $r->saldo_cierre_automotriz < 0 ? 'text-danger' : 'text-success' }}">
-                        {{ number_format($r->saldo_cierre_automotriz, 2) }}
-                    </td>
-                    <td class="text-end fw-bold {{ $r->saldo_cierre_ups < 0 ? 'text-danger' : 'text-success' }}">
-                        {{ number_format($r->saldo_cierre_ups, 2) }}
-                    </td>
-                    <td class="text-end fw-bold {{ $r->saldo_cierre < 0 ? 'text-danger' : 'text-success' }}">
-                        {{ number_format($r->saldo_cierre, 2) }}
-                    </td>
+                    <td class="fw-semibold bg-mes">{{ ReporteGerencialPablo::MESES[$r->mes] ?? $r->mes }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($r->recepcion_nacional_automotriz, 2) }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($r->recepcion_nacional_ups, 2) }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($r->recepcion_importada_automotriz, 2) }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($r->recepcion_importada_ups, 2) }}</td>
+                    <td class="text-end bg-sec1 num">{{ number_format($r->total_recepcion, 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($r->bateria_nacional_automotriz, 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($r->bateria_nacional_ups, 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($r->bateria_importada_automotriz, 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($r->bateria_importada_ups, 2) }}</td>
+                    <td class="text-end bg-sec2 num">{{ number_format($r->consumo, 2) }}</td>
+                    <td class="text-end sec3 bg-sec3 num">{{ number_format($r->maquila_enviada, 2) }}</td>
+                    <td class="text-end sec3 bg-sec3 num">{{ number_format($r->maquila_recibida, 2) }}</td>
+                    <td class="text-end bg-sec3 num">{{ number_format($r->total_maquila, 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($r->saldo_total, 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($r->saldo_cierre_automotriz, 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($r->saldo_cierre_ups, 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($r->saldo_cierre, 2) }}</td>
                     <td class="text-end text-nowrap">
                         <button type="button" class="btn btn-sm btn-outline-info"
                                 onclick="verPrevisualizacion({{ json_encode([
@@ -166,26 +169,26 @@
             @endforelse
             </tbody>
             @if ($registros->isNotEmpty())
-            <tfoot class="table-warning fw-bold">
+            <tfoot class="fw-bold">
                 <tr>
-                    <td>TOTALES</td>
-                    <td class="text-end text-success sec1">{{ number_format($totales['recepcion_nacional_automotriz'], 2) }}</td>
-                    <td class="text-end text-success sec1">{{ number_format($totales['recepcion_nacional_ups'], 2) }}</td>
-                    <td class="text-end text-info sec1">{{ number_format($totales['recepcion_importada_automotriz'], 2) }}</td>
-                    <td class="text-end text-info sec1">{{ number_format($totales['recepcion_importada_ups'], 2) }}</td>
-                    <td class="text-end">{{ number_format($totales['total_recepcion'], 2) }}</td>
-                    <td class="text-end text-primary sec2">{{ number_format($totales['bateria_nacional_automotriz'], 2) }}</td>
-                    <td class="text-end text-primary sec2">{{ number_format($totales['bateria_nacional_ups'], 2) }}</td>
-                    <td class="text-end text-warning sec2">{{ number_format($totales['bateria_importada_automotriz'], 2) }}</td>
-                    <td class="text-end text-warning sec2">{{ number_format($totales['bateria_importada_ups'], 2) }}</td>
-                    <td class="text-end">{{ number_format($totales['consumo'], 2) }}</td>
-                    <td class="text-end text-warning sec3">{{ number_format($totales['maquila_enviada'], 2) }}</td>
-                    <td class="text-end text-info sec3">{{ number_format($totales['maquila_recibida'], 2) }}</td>
-                    <td class="text-end">{{ number_format($totales['total_maquila'], 2) }}</td>
-                    <td class="text-end">{{ number_format($totales['saldo_total'], 2) }}</td>
-                    <td class="text-end {{ $totales['saldo_cierre_automotriz'] < 0 ? 'text-danger' : 'text-success' }}">{{ number_format($totales['saldo_cierre_automotriz'], 2) }}</td>
-                    <td class="text-end {{ $totales['saldo_cierre_ups'] < 0 ? 'text-danger' : 'text-success' }}">{{ number_format($totales['saldo_cierre_ups'], 2) }}</td>
-                    <td class="text-end {{ $totales['saldo_cierre'] < 0 ? 'text-danger' : 'text-success' }}">{{ number_format($totales['saldo_cierre'], 2) }}</td>
+                    <td class="bg-mes">TOTALES</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($totales['recepcion_nacional_automotriz'], 2) }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($totales['recepcion_nacional_ups'], 2) }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($totales['recepcion_importada_automotriz'], 2) }}</td>
+                    <td class="text-end sec1 bg-sec1 num">{{ number_format($totales['recepcion_importada_ups'], 2) }}</td>
+                    <td class="text-end bg-sec1 num">{{ number_format($totales['total_recepcion'], 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($totales['bateria_nacional_automotriz'], 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($totales['bateria_nacional_ups'], 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($totales['bateria_importada_automotriz'], 2) }}</td>
+                    <td class="text-end sec2 bg-sec2 num">{{ number_format($totales['bateria_importada_ups'], 2) }}</td>
+                    <td class="text-end bg-sec2 num">{{ number_format($totales['consumo'], 2) }}</td>
+                    <td class="text-end sec3 bg-sec3 num">{{ number_format($totales['maquila_enviada'], 2) }}</td>
+                    <td class="text-end sec3 bg-sec3 num">{{ number_format($totales['maquila_recibida'], 2) }}</td>
+                    <td class="text-end bg-sec3 num">{{ number_format($totales['total_maquila'], 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($totales['saldo_total'], 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($totales['saldo_cierre_automotriz'], 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($totales['saldo_cierre_ups'], 2) }}</td>
+                    <td class="text-end bg-saldo num">{{ number_format($totales['saldo_cierre'], 2) }}</td>
                     <td></td>
                 </tr>
             </tfoot>

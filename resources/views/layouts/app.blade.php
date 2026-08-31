@@ -43,15 +43,15 @@
                         Operaciones
                     </a>
                 </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle {{ request()->routeIs('bodega.*', 'saldos.*') ? 'active' : '' }}"
-                       href="#" data-bs-toggle="dropdown">
-                        Inventario
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('bodega.*') ? 'active' : '' }}" href="{{ route('bodega.index') }}">
+                        Bodega
                     </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item {{ request()->routeIs('bodega.*') ? 'active' : '' }}" href="{{ route('bodega.index') }}">Bodega / Despachos</a></li>
-                        <li><a class="dropdown-item {{ request()->routeIs('saldos.*') ? 'active' : '' }}" href="{{ route('saldos.index') }}">Saldos</a></li>
-                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('saldos.*') ? 'active' : '' }}" href="{{ route('saldos.index') }}">
+                        Saldos
+                    </a>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle {{ request()->routeIs('reportes-gerenciales.*', 'pablo.*') ? 'active' : '' }}"

@@ -3,7 +3,7 @@
 <div class="card shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover table-sm align-middle mb-0">
-            <thead class="table-light">
+            <thead class="table-success">
                 <tr>
                     <th>Fecha Inicio</th><th>Fecha Entrega</th><th>Despacho</th><th>Tipo</th><th>Contenedor</th>
                     <th class="text-end">Cantidad</th><th>Unidad</th>
