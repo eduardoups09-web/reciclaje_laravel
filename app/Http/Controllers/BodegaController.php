@@ -226,8 +226,23 @@ class BodegaController extends Controller
             'fechaemision'        => ['nullable', 'date'],
             'llegada'             => ['nullable', 'string', 'max:100'],
         ], [], [
-            'fechainicio' => 'fecha',
-            'cantidad'    => 'cantidad',
+            'fechainicio'         => 'fecha de inicio',
+            'tipobateria'         => 'tipo de batería',
+            'despacho'            => 'n.º despacho',
+            'contenedor'          => 'contenedor',
+            'cantidad'            => 'cantidad',
+            'unidad'              => 'unidad',
+            'consecutivo'         => 'consecutivo',
+            'nombreDestinatario'  => 'razón social del destinatario',
+            'rucDestinatario'     => 'RUC del destinatario',
+            'nombreTransportista' => 'razón social del transportista',
+            'transportistaRuc'    => 'RUC del transportista',
+            'placaTransportista'  => 'placa del transportista',
+            'observacion'         => 'observación',
+            'motivo'              => 'motivo',
+            'partida'             => 'partida',
+            'fechaemision'        => 'fecha de entrega',
+            'llegada'             => 'llegada',
         ]);
     }
 

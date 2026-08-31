@@ -61,7 +61,7 @@
                     <select name="unidad" class="form-select">
                         <option value="">Seleccionar…</option>
                         @foreach ($unidades as $u)
-                            <option value="{{ $u }}" @selected(old('unidad', $bodega->unidad) === $u)>{{ $u }}</option>
+                            <option value="{{ $u }}" @selected(old('unidad', $bodega->unidad ?? 'Kilogramos') === $u)>{{ $u }}</option>
                         @endforeach
                     </select>
                 </div>

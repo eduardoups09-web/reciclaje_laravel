@@ -240,6 +240,14 @@
                 div.className = 'invalid-feedback';
                 div.textContent = msgs[0];
                 input.parentElement.appendChild(div);
+
+                const eventType = input.tagName === 'SELECT' ? 'change' : 'input';
+                input.addEventListener(eventType, function limpiarError() {
+                    this.classList.remove('is-invalid');
+                    const feedback = this.parentElement.querySelector('.invalid-feedback');
+                    if (feedback) feedback.remove();
+                    this.removeEventListener(eventType, limpiarError);
+                }, { once: true });
             }
         }
     }
