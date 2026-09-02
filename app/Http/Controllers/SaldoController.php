@@ -18,17 +18,36 @@ class SaldoController extends Controller
         if (empty($filtros['anio'])) $filtros['anio'] = now()->year;
         if (empty($filtros['mes']))  $filtros['mes'] = now()->month;
 
+        $this->asegurarRegistrosMes($filtros['anio'], $filtros['mes']);
+
         $existe = DB::table('saldosinsert')
             ->whereYear('fechasaldoinsert', $filtros['anio'])
             ->whereMonth('fechasaldoinsert', $filtros['mes'])
             ->where(function ($q) {
                 $q->where('consumo', '>', 0)
-                  ->orWhere('total_recepcion', '>', 0);
+                  ->orWhere('total_recepcion', '>', 0)
+                  ->orWhere('maquila_recibida', '>', 0);
             })
             ->exists();
 
-        if (!$existe) {
-            $this->asegurarRegistrosMes($filtros['anio'], $filtros['mes']);
+        $bodegaSinReflejar = DB::table('bodega')
+            ->selectRaw('fechainicio, SUM(CAST(cantidad AS DECIMAL(14,2))) as total_bodega')
+            ->where('is_deleted', 0)
+            ->whereYear('fechainicio', $filtros['anio'])
+            ->whereMonth('fechainicio', $filtros['mes'])
+            ->whereNotNull('fechainicio')
+            ->groupBy('fechainicio')
+            ->get()
+            ->filter(function ($b) {
+                $saldoMaquila = DB::table('saldosinsert')
+                    ->where('fechasaldoinsert', $b->fechainicio)
+                    ->where('turnosaldoinsert', 'Diurno')
+                    ->value('maquila_recibida');
+                return (float) ($saldoMaquila ?? 0) != $b->total_bodega;
+            })
+            ->isNotEmpty();
+
+        if (!$existe || $bodegaSinReflejar) {
             $this->calcularYGuardarSaldos($filtros['anio'], $filtros['mes']);
         }
 
@@ -196,18 +215,14 @@ class SaldoController extends Controller
             ->get()
             ->keyBy(fn($r) => $r->fecha . '|' . $r->turno);
 
-        $clavesValidas = $fechasMov->keys()->toArray();
-
-        if (!empty($clavesValidas)) {
-            DB::table('saldosinsert')
-                ->whereYear('fechasaldoinsert', $anio)
-                ->whereMonth('fechasaldoinsert', $mes)
-                ->whereNotIn(
-                    DB::raw("CONCAT(fechasaldoinsert, '|', turnosaldoinsert)"),
-                    $clavesValidas
-                )
-                ->delete();
-        }
+        $fechasBodega = DB::table('bodega')
+            ->where('is_deleted', 0)
+            ->whereYear('fechainicio', $anio)
+            ->whereMonth('fechainicio', $mes)
+            ->whereNotNull('fechainicio')
+            ->selectRaw('DISTINCT fechainicio as fecha')
+            ->get()
+            ->keyBy(fn($r) => $r->fecha);
 
         $aInsertar = [];
         foreach ($fechasMov as $fm) {
@@ -224,6 +239,26 @@ class SaldoController extends Controller
                     'created_at'        => $now,
                     'updated_at'        => $now,
                 ];
+            }
+        }
+
+        foreach ($fechasBodega as $fb) {
+            $key = $fb->fecha . '|Diurno';
+            if (!isset($fechasMov[$key])) {
+                $existe = DB::table('saldosinsert')
+                    ->where('fechasaldoinsert', $fb->fecha)
+                    ->where('turnosaldoinsert', 'Diurno')
+                    ->exists();
+
+                if (!$existe) {
+                    $aInsertar[] = [
+                        'fechasaldoinsert'  => $fb->fecha,
+                        'turnosaldoinsert'  => 'Diurno',
+                        'gruposaldoinsert'  => '1',
+                        'created_at'        => $now,
+                        'updated_at'        => $now,
+                    ];
+                }
             }
         }
 
