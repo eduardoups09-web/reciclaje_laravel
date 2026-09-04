@@ -244,7 +244,7 @@ class ReciclajeExport
                 SELECT FechaDet, SUM(Cantidad) AS cantidad_total
                 FROM ingresosInventarios
                 WHERE Tipo = 'IBA' AND Procedencia <> 'EXTRANJERA'
-                  AND Producto IN ('Baterias Humedas Maquila','Baterias Estacionarias Maquila')
+                  AND UPPER(Producto) IN ('BATERIAS HUMEDAS MAQUILA','BATERIAS ESTACIONARIAS MAQUILA')
                   AND FechaDet >= ? AND FechaDet < ?
                 GROUP BY FechaDet
             ) ing_maq ON ing_maq.FechaDet = md.fecha

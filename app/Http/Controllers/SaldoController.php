@@ -13,6 +13,8 @@ class SaldoController extends Controller
 {
     public function index(Request $request)
     {
+        $this->asegurarColumnasSaldosinsert();
+
         $filtros = $request->only('anio', 'mes');
 
         if (empty($filtros['anio'])) $filtros['anio'] = now()->year;
@@ -20,32 +22,40 @@ class SaldoController extends Controller
 
         $this->asegurarRegistrosMes($filtros['anio'], $filtros['mes']);
 
-        $existe = DB::table('saldosinsert')
-            ->whereYear('fechasaldoinsert', $filtros['anio'])
-            ->whereMonth('fechasaldoinsert', $filtros['mes'])
-            ->where(function ($q) {
-                $q->where('consumo', '>', 0)
-                  ->orWhere('total_recepcion', '>', 0)
-                  ->orWhere('maquila_recibida', '>', 0);
-            })
-            ->exists();
+        $columnasExistentes = $this->verificarColumnasSaldosinsert();
 
-        $bodegaSinReflejar = DB::table('bodega')
-            ->selectRaw('fechainicio, SUM(CAST(cantidad AS DECIMAL(14,2))) as total_bodega')
-            ->where('is_deleted', 0)
-            ->whereYear('fechainicio', $filtros['anio'])
-            ->whereMonth('fechainicio', $filtros['mes'])
-            ->whereNotNull('fechainicio')
-            ->groupBy('fechainicio')
-            ->get()
-            ->filter(function ($b) {
-                $saldoMaquila = DB::table('saldosinsert')
-                    ->where('fechasaldoinsert', $b->fechainicio)
-                    ->where('turnosaldoinsert', 'Diurno')
-                    ->value('maquila_recibida');
-                return (float) ($saldoMaquila ?? 0) != $b->total_bodega;
-            })
-            ->isNotEmpty();
+        $existe = false;
+        if ($columnasExistentes) {
+            $existe = DB::table('saldosinsert')
+                ->whereYear('fechasaldoinsert', $filtros['anio'])
+                ->whereMonth('fechasaldoinsert', $filtros['mes'])
+                ->where(function ($q) {
+                    $q->where('consumo', '>', 0)
+                      ->orWhere('total_recepcion', '>', 0)
+                      ->orWhere('maquila_recibida', '>', 0);
+                })
+                ->exists();
+        }
+
+        $bodegaSinReflejar = false;
+        if ($columnasExistentes) {
+            $bodegaSinReflejar = DB::table('bodega')
+                ->selectRaw('fechainicio, SUM(CAST(cantidad AS DECIMAL(14,2))) as total_bodega')
+                ->where('is_deleted', 0)
+                ->whereYear('fechainicio', $filtros['anio'])
+                ->whereMonth('fechainicio', $filtros['mes'])
+                ->whereNotNull('fechainicio')
+                ->groupBy('fechainicio')
+                ->get()
+                ->filter(function ($b) {
+                    $saldoMaquila = DB::table('saldosinsert')
+                        ->where('fechasaldoinsert', $b->fechainicio)
+                        ->where('turnosaldoinsert', 'Diurno')
+                        ->value('maquila_recibida');
+                    return (float) ($saldoMaquila ?? 0) != $b->total_bodega;
+                })
+                ->isNotEmpty();
+        }
 
         if (!$existe || $bodegaSinReflejar) {
             $this->calcularYGuardarSaldos($filtros['anio'], $filtros['mes']);
@@ -132,8 +142,12 @@ class SaldoController extends Controller
 
         $s = Saldosinsert::create($data);
 
+        $anio = Carbon::parse($s->fechasaldoinsert)->year;
+        $mes = Carbon::parse($s->fechasaldoinsert)->month;
+        $this->calcularYGuardarSaldos($anio, $mes);
+
         return redirect()->route('saldos.index')
-            ->with('success', "Saldo #{$s->id} creado correctamente.");
+            ->with('success', "Saldo #{$s->id} creado y recalculado correctamente.");
     }
 
     public function edit(Saldosinsert $saldo)
@@ -148,16 +162,25 @@ class SaldoController extends Controller
         $data['updated_at'] = now();
         $saldo->update($data);
 
+        $anio = Carbon::parse($saldo->fechasaldoinsert)->year;
+        $mes = Carbon::parse($saldo->fechasaldoinsert)->month;
+        $this->calcularYGuardarSaldos($anio, $mes);
+
         return redirect()->route('saldos.index')
-            ->with('success', "Saldo #{$saldo->id} actualizado.");
+            ->with('success', "Saldo #{$saldo->id} actualizado y recalculado.");
     }
 
     public function destroy(Saldosinsert $saldo)
     {
+        $anio = Carbon::parse($saldo->fechasaldoinsert)->year;
+        $mes = Carbon::parse($saldo->fechasaldoinsert)->month;
+        
         $saldo->delete();
 
+        $this->calcularYGuardarSaldos($anio, $mes);
+
         return redirect()->route('saldos.index')
-            ->with('success', "Saldo #{$saldo->id} eliminado.");
+            ->with('success', "Saldo eliminado y mes recalculado.");
     }
 
     /**
@@ -168,36 +191,11 @@ class SaldoController extends Controller
         $anio = $request->input('anio', now()->year);
         $mes = $request->input('mes', now()->month);
 
-        $this->insertarSaldoInicial();
         $this->asegurarRegistrosMes($anio, $mes);
         $this->calcularYGuardarSaldos($anio, $mes);
 
         return redirect()->route('saldos.index', ['anio' => $anio, 'mes' => $mes])
             ->with('success', "Se auto-llenaron los saldos del mes.");
-    }
-
-    /**
-     * Inserta el saldo inicial de enero 2026 si no existe.
-     */
-    private function insertarSaldoInicial(): void
-    {
-        $existente = Saldo::where('is_deleted', 0)
-            ->where('fechasaldo', '2026-01-01')
-            ->first();
-
-        if (!$existente) {
-            Saldo::create([
-                'fechasaldo'         => '2026-01-01',
-                'turnosaldo'         => 'Diurno',
-                'gruposaldo'         => '1',
-                'cantidadsaldo'      => 868740,
-                'cantidadAutomotriz' => 577053,
-                'cantidadUPS'        => 291687,
-                'status_id'          => 1,
-                'is_deleted'         => 0,
-                'created_at'         => now(),
-            ]);
-        }
     }
 
     /**
@@ -274,6 +272,8 @@ class SaldoController extends Controller
      */
     private function calcularYGuardarSaldos(int $anio, int $mes): void
     {
+        $this->asegurarColumnasSaldosinsert();
+
         $registros = Saldosinsert::whereYear('fechasaldoinsert', $anio)
             ->whereMonth('fechasaldoinsert', $mes)
             ->orderBy('fechasaldoinsert')
@@ -378,12 +378,12 @@ class SaldoController extends Controller
             ->where('FechaCab', '>=', $fecha . ' 00:00:00')
             ->where('FechaCab', '<', $fechaSiguiente . ' 00:00:00')
             ->selectRaw('
-                SUM(CASE WHEN Producto IN ("Baterías Humedas Nac", "Baterias Humedas Maquila") THEN Cantidad ELSE 0 END) as rec_nac_auto,
-                SUM(CASE WHEN Producto = "Baterías Estacionarias Nac" THEN Cantidad ELSE 0 END) as rec_nac_ups,
-                SUM(CASE WHEN Producto LIKE "%Golf%" OR Producto LIKE "%Humedas Ext%" OR Producto LIKE "%Húmedas Ext%" THEN Cantidad ELSE 0 END) as rec_imp_auto,
-                SUM(CASE WHEN Producto LIKE "Baterías Estacionarias Ext%" THEN Cantidad ELSE 0 END) as rec_imp_ups,
-                SUM(Cantidad) as total_recepcion,
-                SUM(CASE WHEN Producto = "Baterías Húmedas Maquila" THEN Cantidad ELSE 0 END) as maquila_enviada
+                SUM(CASE WHEN UPPER(Producto) IN ("BATERIAS HUMEDAS NAC", "BATERIAS HUMEDAS MAQUILA") THEN Cantidad ELSE 0 END) as rec_nac_auto,
+                SUM(CASE WHEN UPPER(Producto) = "BATERIAS ESTACIONARIAS NAC" THEN Cantidad ELSE 0 END) as rec_nac_ups,
+                SUM(CASE WHEN UPPER(Producto) LIKE "%GOLF%" OR UPPER(Producto) LIKE "%HUMEDAS EXT%" THEN Cantidad ELSE 0 END) as rec_imp_auto,
+                SUM(CASE WHEN UPPER(Producto) LIKE "BATERIAS ESTACIONARIAS EXT%" THEN Cantidad ELSE 0 END) as rec_imp_ups,
+                SUM(CASE WHEN UPPER(Producto) IN ("BATERIAS HUMEDAS NAC", "BATERIAS HUMEDAS MAQUILA") OR UPPER(Producto) = "BATERIAS ESTACIONARIAS NAC" OR UPPER(Producto) LIKE "%GOLF%" OR UPPER(Producto) LIKE "%HUMEDAS EXT%" OR UPPER(Producto) LIKE "BATERIAS ESTACIONARIAS EXT%" THEN Cantidad ELSE 0 END) as total_recepcion,
+                SUM(CASE WHEN UPPER(Producto) LIKE "%HUMEDAS%MAQUILA%" OR UPPER(Producto) LIKE "%ESTACIONARIAS%MAQUILA%" THEN Cantidad ELSE 0 END) as maquila_enviada
             ')->first();
 
         $maquila_recibida = DB::table('bodega')
@@ -531,5 +531,51 @@ class SaldoController extends Controller
             'fechasaldoinsert' => 'fecha',
             'turnosaldoinsert' => 'turno',
         ]);
+    }
+
+    /**
+     * Verifica si las columnas calculadas existen en saldosinsert.
+     */
+    private function verificarColumnasSaldosinsert(): bool
+    {
+        $columns = DB::select("SHOW COLUMNS FROM saldosinsert");
+        $columnNames = array_column($columns, 'Field');
+        return in_array('consumo', $columnNames) && in_array('total_recepcion', $columnNames);
+    }
+
+    /**
+     * Crea las columnas calculadas faltantes en saldosinsert si no existen.
+     */
+    private function asegurarColumnasSaldosinsert(): void
+    {
+        if ($this->verificarColumnasSaldosinsert()) {
+            return;
+        }
+
+        $columnas = [
+            'total_recepcion'               => "decimal(14,2) NOT NULL DEFAULT 0",
+            'recepcion_nacional_automotriz'  => "decimal(14,2) NOT NULL DEFAULT 0",
+            'recepcion_nacional_ups'         => "decimal(14,2) NOT NULL DEFAULT 0",
+            'recepcion_importada_automotriz' => "decimal(14,2) NOT NULL DEFAULT 0",
+            'recepcion_importada_ups'        => "decimal(14,2) NOT NULL DEFAULT 0",
+            'bateria_nacional_automotriz'    => "decimal(14,2) NOT NULL DEFAULT 0",
+            'bateria_nacional_ups'           => "decimal(14,2) NOT NULL DEFAULT 0",
+            'bateria_importada_automotriz'   => "decimal(14,2) NOT NULL DEFAULT 0",
+            'bateria_importada_ups'          => "decimal(14,2) NOT NULL DEFAULT 0",
+            'consumo'                        => "decimal(14,2) NOT NULL DEFAULT 0",
+            'maquila_enviada'                => "decimal(14,2) NOT NULL DEFAULT 0",
+            'maquila_recibida'               => "decimal(14,2) NOT NULL DEFAULT 0",
+            'saldo_cierre'                   => "decimal(14,2) NOT NULL DEFAULT 0",
+            'saldo_cierre_automotriz'        => "decimal(14,2) NOT NULL DEFAULT 0",
+            'saldo_cierre_ups'              => "decimal(14,2) NOT NULL DEFAULT 0",
+        ];
+
+        foreach ($columnas as $columna => $definicion) {
+            try {
+                DB::statement("ALTER TABLE saldosinsert ADD COLUMN {$columna} {$definicion}");
+            } catch (\Exception $e) {
+                // Columna ya existe, ignorar
+            }
+        }
     }
 }

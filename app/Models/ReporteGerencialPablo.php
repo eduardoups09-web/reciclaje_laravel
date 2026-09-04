@@ -52,38 +52,39 @@ class ReporteGerencialPablo extends Model
             ->first();
         $saldo_total = $saldo->cantidadsaldo ?? 0;
 
-        // 2. Total recepción
+        // 2. Total recepción (solo baterías)
         $total_recepcion = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
+            ->whereRaw('UPPER(Producto) IN ("BATERIAS HUMEDAS NAC", "BATERIAS HUMEDAS MAQUILA") OR UPPER(Producto) = "BATERIAS ESTACIONARIAS NAC" OR UPPER(Producto) LIKE "%GOLF%" OR UPPER(Producto) LIKE "%HUMEDAS EXT%" OR UPPER(Producto) LIKE "BATERIAS ESTACIONARIAS EXT%"')
             ->sum('Cantidad');
 
         // 3. Recepción Nacional Automotriz
         $recepcion_nacional_automotriz = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->whereIn('Producto', ['Baterías Humedas Nac', 'Baterias Humedas Maquila'])
+            ->whereRaw('UPPER(Producto) IN ("BATERIAS HUMEDAS NAC", "BATERIAS HUMEDAS MAQUILA")')
             ->sum('Cantidad');
 
         // 4. Recepción Nacional UPS
         $recepcion_nacional_ups = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->where('Producto', 'Baterías Estacionarias Nac')
+            ->whereRaw('UPPER(Producto) = "BATERIAS ESTACIONARIAS NAC"')
             ->sum('Cantidad');
 
         // 5. Recepción Importado Automotriz
         $recepcion_importada_automotriz = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->whereIn('Producto', ['Baterias de Golf', 'Baterías Humedas Ext'])
+            ->whereRaw('UPPER(Producto) IN ("BATERIAS DE GOLF", "BATERIAS HUMEDAS EXT")')
             ->sum('Cantidad');
 
         // 6. Recepción Importado UPS
         $recepcion_importada_ups = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->where('Producto', 'LIKE', 'Baterías Estacionarias Ext%')
+            ->whereRaw('UPPER(Producto) LIKE "BATERIAS ESTACIONARIAS EXT%"')
             ->sum('Cantidad');
 
         // 7. Batería Nacional Automotriz
@@ -126,7 +127,7 @@ class ReporteGerencialPablo extends Model
         $maquila_enviada = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->where('Producto', 'Baterías Húmedas Maquila')
+            ->whereRaw('UPPER(Producto) LIKE "%HUMEDAS%MAQUILA%"')
             ->sum('Cantidad');
 
         // 13. Maquila recibida

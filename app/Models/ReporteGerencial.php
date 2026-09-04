@@ -66,11 +66,11 @@ class ReporteGerencial extends Model
             ->sum('pesobateriaimport');
         $consumo = $consumoNacional + $consumoImport;
 
-        // 4. Maquila enviada: suma Cantidad donde Producto='Baterías Húmedas Maquila'
+        // 4. Maquila enviada: suma Cantidad donde Producto contiene HUMEDAS y MAQUILA
         $maquila_enviada = DB::table('ingresosInventarios')
             ->whereMonth('FechaCab', $mes)
             ->whereYear('FechaCab', $anio)
-            ->where('Producto', 'Baterías Húmedas Maquila')
+            ->whereRaw('UPPER(Producto) LIKE "%HUMEDAS%MAQUILA%"')
             ->sum('Cantidad');
 
         // 5. Maquila recibida: suma cantidad de bodega del mes
